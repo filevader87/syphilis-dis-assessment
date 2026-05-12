@@ -1,0 +1,18 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+  command = "node scripts/build-questions.js"
+
+[functions]
+  node_bundler = "esbuild"
+  included_files = ["netlify/functions/_questions.json", "netlify/functions/_blobs-bridge.js"]
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+[[headers]]
+  for = "/admin/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Syphilis 2026 DIS Case Definition Assessment</title>
+<style>
+  :root { --bg:#f5f7fa; --card:#fff; --primary:#0b5ed7; --text:#1f2937; --muted:#6b7280; --border:#e5e7eb; --good:#16a34a; --warn:#eab308; --bad:#dc2626; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); font-size:18px; line-height:1.55; }
+  header { background:var(--primary); color:#fff; padding:26px 28px; }
+  header h1 { margin:0; font-size:26px; font-weight:600; }
+  main { max-width:920px; margin:28px auto; padding:0 18px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:28px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+  .meta { display:flex; gap:12px; flex-wrap:wrap; font-size:15px; color:var(--muted); margin-bottom:14px; align-items:center; }
+  .pill { background:#eef2ff; color:#3730a3; padding:4px 12px; border-radius:999px; font-weight:500; font-size:14px; }
+  .region-pill { background:#dcfce7; color:#166534; padding:4px 12px; border-radius:999px; font-weight:500; font-size:14px; }
+  .domain-pill { background:#fef3c7; color:#92400e; padding:3px 10px; border-radius:999px; font-size:13px; margin-right:8px; }
+  .qblock { padding:24px 0; border-bottom:1px solid var(--border); }
+  .qblock:last-child { border-bottom:0; }
+  .q { font-weight:600; margin:0 0 16px; font-size:18px; }
+  .q .num { color:var(--primary); margin-right:8px; }
+  label.opt { display:block; padding:13px 16px; border:1px solid var(--border); border-radius:8px; margin:8px 0; cursor:pointer; font-size:17px; transition:background .12s, border-color .12s; }
+  label.opt:hover { background:#f3f4f6; }
+  label.opt.checked { background:#eef2ff; border-color:var(--primary); }
+  label.opt input { margin-right:12px; vertical-align:middle; transform:scale(1.15); }
+  textarea { width:100%; min-height:120px; padding:12px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:17px; resize:vertical; line-height:1.5; }
+  .actions { display:flex; gap:12px; align-items:center; margin-top:22px; padding-top:22px; border-top:1px solid var(--border); }
+  button { background:var(--primary); color:#fff; border:0; border-radius:8px; padding:13px 26px; font-size:17px; cursor:pointer; font-weight:500; }
+  button:disabled { opacity:.55; cursor:not-allowed; }
+  #status { color:var(--muted); font-size:15px; }
+  .err { color:var(--bad); }
+  .login { max-width:480px; margin:80px auto; }
+  .login input, .login select { width:100%; padding:12px; border:1px solid var(--border); border-radius:8px; font-size:17px; margin-top:8px; font-family:inherit; }
+  .help { font-size:14px; color:var(--muted); font-style:italic; margin-top:6px; }
+  .done h2 { font-size:24px; margin:0 0 10px; }
+  .done p { font-size:17px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Syphilis 2026 DIS Case Definition Assessment</h1>
+</header>
+<main id="root"></main>
+<script>
+const params = new URLSearchParams(location.search);
+const TOKEN  = params.get('token')  || '';
+const REGION = params.get('region') || '';
+let QUESTIONS = [];
+let submitted = false;
+
+const root = () => document.getElementById('root');
+
+if (!TOKEN) {
+  root().innerHTML = `
+    <div class="card login">
+      <h2>Enter your information</h2>
+      <p class="help">Your supervisor sent you a direct link. If you need to enter manually, complete both fields below.</p>
+      <label style="font-size:15px;font-weight:600;">DIS token / ID
+        <input id="tok" placeholder="e.g. dis-jane-doe" />
+      </label>
+      <label style="font-size:15px;font-weight:600;display:block;margin-top:14px;">Region
+        <select id="reg">
+          <option value="">— Select region —</option>
+          <option value="Region 1">Region 1</option>
+          <option value="Region 2">Region 2</option>
+        </select>
+      </label>
+      <button style="margin-top:16px;width:100%;" onclick="startManual()">Start assessment</button>
+    </div>`;
+} else if (sessionStorage.getItem('dis_done_' + TOKEN)) {
+  showThankYou(true);
+} else {
+  loadQuestions();
+}
+
+function startManual() {
+  const t = document.getElementById('tok').value.trim();
+  const r = document.getElementById('reg').value;
+  if (!t) { alert('Please enter your DIS token.'); return; }
+  if (!r) { alert('Please select your region.'); return; }
+  location.href = `assessment.html?token=${encodeURIComponent(t)}&region=${encodeURIComponent(r)}`;
+}
+
+async function loadQuestions() {
+  try {
+    const r = await fetch('questions.json');
+    QUESTIONS = await r.json();
+    render();
+  } catch {
+    root().innerHTML = '<div class="card"><span class="err">Failed to load questions.</span></div>';
+  }
+}
+
+function render() {
+  const regionTag = REGION
+    ? `<span class="region-pill">${escapeHtml(REGION)}</span>`
+    : '<span class="pill" style="background:#fee2e2;color:#991b1b;">No region set</span>';
+
+  const blocks = QUESTIONS.map(renderQ).join('');
+  root().innerHTML = `
+    <div class="card">
+      <div class="meta">
+        <span>Tester: <strong>${escapeHtml(TOKEN)}</strong></span>
+        ${regionTag}
+        <span class="pill" id="progressLabel">0 / ${QUESTIONS.length} answered</span>
+      </div>
+      <p class="help">Select the best answer unless the question says <em>select all that apply</em> or asks for a written response. For write-in items, include both the stage/classification and the rationale requested.</p>
+      <div id="quiz">${blocks}</div>
+      <div class="actions">
+        <button id="submitBtn" onclick="submitTest()" disabled>Submit Assessment</button>
+        <span id="status"></span>
+      </div>
+    </div>`;
+  attachHandlers();
+  updateProgress();
+}
+
+function renderQ(q) {
+  const head = `<p class="q"><span class="num">${q.id}.</span>
+    <span class="domain-pill">${escapeHtml(q.domain)}</span><br><br>${escapeHtml(q.q)}</p>`;
+  if (q.type === 'mc') {
+    return `<div class="qblock" data-id="${q.id}">${head}${
+      q.options.map(o =>
+        `<label class="opt"><input type="radio" name="q${q.id}" value="${o.key}">${escapeHtml(o.text)}</label>`
+      ).join('')
+    }</div>`;
+  }
+  if (q.type === 'ms') {
+    return `<div class="qblock" data-id="${q.id}">${head}<p class="help">Select all that apply.</p>${
+      q.options.map(o =>
+        `<label class="opt"><input type="checkbox" name="q${q.id}" value="${o.key}">${escapeHtml(o.text)}</label>`
+      ).join('')
+    }</div>`;
+  }
+  if (q.type === 'write') {
+    return `<div class="qblock" data-id="${q.id}">${head}
+      <textarea name="q${q.id}" placeholder="Write your response — include stage/classification and rationale."></textarea>
+    </div>`;
+  }
+  return '';
+}
+
+function attachHandlers() {
+  document.querySelectorAll('input,textarea').forEach(el => {
+    el.addEventListener('change', updateProgress);
+    el.addEventListener('input', updateProgress);
+  });
+}
+
+function refreshChecked() {
+  document.querySelectorAll('label.opt').forEach(lbl => {
+    const inp = lbl.querySelector('input');
+    lbl.classList.toggle('checked', !!inp && inp.checked);
+  });
+}
+
+function collect() {
+  const responses = {};
+  for (const q of QUESTIONS) {
+    if (q.type === 'mc') {
+      const sel = document.querySelector(`input[name=q${q.id}]:checked`);
+      responses[q.id] = sel ? sel.value : null;
+    } else if (q.type === 'ms') {
+      responses[q.id] = [...document.querySelectorAll(`input[name=q${q.id}]:checked`)].map(i => i.value);
+    } else if (q.type === 'write') {
+      const ta = document.querySelector(`textarea[name=q${q.id}]`);
+      responses[q.id] = ta ? ta.value.trim() : '';
+    }
+  }
+  return responses;
+}
+
+function updateProgress() {
+  refreshChecked();
+  const r = collect();
+  let answered = 0;
+  for (const q of QUESTIONS) {
+    const v = r[q.id];
+    if (q.type === 'ms' ? (v && v.length) : (v != null && v !== '')) answered++;
+  }
+  document.getElementById('progressLabel').textContent = `${answered} / ${QUESTIONS.length} answered`;
+  document.getElementById('submitBtn').disabled = answered === 0 || submitted;
+}
+
+async function submitTest() {
+  if (submitted) return;
+  submitted = true;
+  document.getElementById('submitBtn').disabled = true;
+  document.getElementById('status').textContent = 'Submitting…';
+  try {
+    const res = await fetch('/.netlify/functions/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: TOKEN, region: REGION || 'Unassigned', responses: collect() })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 409) {
+      sessionStorage.setItem('dis_done_' + TOKEN, '1');
+      return showThankYou(true);
+    }
+    if (!res.ok || !data.ok) throw new Error('HTTP ' + res.status);
+    sessionStorage.setItem('dis_done_' + TOKEN, '1');
+    showThankYou(false);
+  } catch {
+    document.getElementById('status').innerHTML = '<span class="err">Submission failed — please retry.</span>';
+    submitted = false;
+    document.getElementById('submitBtn').disabled = false;
+  }
+}
+
+function showThankYou(alreadyTaken) {
+  root().innerHTML = `
+    <div class="card done">
+      <h2>${alreadyTaken ? 'Assessment already submitted' : 'Submission received ✓'}</h2>
+      <p>Tester: <strong>${escapeHtml(TOKEN)}</strong>${REGION ? ` &nbsp;·&nbsp; ${escapeHtml(REGION)}` : ''}</p>
+      <p>${alreadyTaken
+        ? 'This token has already completed the assessment. To retake after additional training, your program supervisor must reset your token.'
+        : 'Your responses have been recorded. Your program supervisor will review your results and follow up with next steps.'}</p>
+      <p class="help">You may close this window.</p>
+    </div>`;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,431 @@
+[
+  {
+    "id": 1,
+    "type": "mc",
+    "points": 1,
+    "q": "A 28-year-old patient presents with a non-tender, indurated ulcer on the shaft of the penis and generalized lymphadenopathy. The DIS should classify this patient as having:",
+    "options": [
+      {
+        "key": "a",
+        "text": "Primary Syphilis"
+      },
+      {
+        "key": "b",
+        "text": "Secondary Syphilis"
+      },
+      {
+        "key": "c",
+        "text": "Early Non-Primary Non-Secondary Syphilis"
+      },
+      {
+        "key": "d",
+        "text": "Syphilis, Unknown Duration"
+      }
+    ],
+    "domain": "Clinical Recognition"
+  },
+  {
+    "id": 2,
+    "type": "mc",
+    "points": 1,
+    "q": "Which of the following clinical signs is NOT typically associated with secondary syphilis?",
+    "options": [
+      {
+        "key": "a",
+        "text": "Palmar and plantar rash"
+      },
+      {
+        "key": "b",
+        "text": "Condylomata lata"
+      },
+      {
+        "key": "c",
+        "text": "A single, painless chancre"
+      },
+      {
+        "key": "d",
+        "text": "Mucous patches"
+      }
+    ],
+    "domain": "Clinical Recognition"
+  },
+  {
+    "id": 3,
+    "type": "mc",
+    "points": 1,
+    "q": "According to the staging framework, a patient has no symptoms, a reactive treponemal test, and a reactive nontreponemal test. The patient had a documented negative RPR 8 months ago. How should the case be staged?",
+    "options": [
+      {
+        "key": "a",
+        "text": "Syphilis, Unknown Duration"
+      },
+      {
+        "key": "b",
+        "text": "Syphilis, Early Non-Primary Non-Secondary"
+      },
+      {
+        "key": "c",
+        "text": "Primary Syphilis"
+      },
+      {
+        "key": "d",
+        "text": "Secondary Syphilis"
+      }
+    ],
+    "domain": "Case Review"
+  },
+  {
+    "id": 4,
+    "type": "mc",
+    "points": 1,
+    "q": "A patient has a reactive treponemal test and current RPR of 1:2. Medical history shows a documented RPR of 1:16 six months ago. Does this meet supportive laboratory criteria for a new early infection?",
+    "options": [
+      {
+        "key": "a",
+        "text": "Yes; a fourfold increase occurred"
+      },
+      {
+        "key": "b",
+        "text": "Yes; any fourfold change qualifies"
+      },
+      {
+        "key": "c",
+        "text": "No; this is a fourfold decrease, not a fourfold increase"
+      },
+      {
+        "key": "d",
+        "text": "No; a treponemal test alone is required"
+      }
+    ],
+    "domain": "Laboratory"
+  },
+  {
+    "id": 5,
+    "type": "mc",
+    "points": 1,
+    "q": "Which laboratory pattern generally provides presumptive serologic evidence of syphilis infection for stages requiring both serologic test types?",
+    "options": [
+      {
+        "key": "a",
+        "text": "A single positive RPR only"
+      },
+      {
+        "key": "b",
+        "text": "A single positive FTA-ABS only"
+      },
+      {
+        "key": "c",
+        "text": "A reactive treponemal test and a reactive nontreponemal test"
+      },
+      {
+        "key": "d",
+        "text": "A reactive VDRL test only"
+      }
+    ],
+    "domain": "Laboratory"
+  },
+  {
+    "id": 6,
+    "type": "mc",
+    "points": 1,
+    "q": "For a patient diagnosed with secondary syphilis, what is the standard sexual contact interview period used for partner services in many DIS protocols?",
+    "options": [
+      {
+        "key": "a",
+        "text": "30 days"
+      },
+      {
+        "key": "b",
+        "text": "90 days"
+      },
+      {
+        "key": "c",
+        "text": "6 months"
+      },
+      {
+        "key": "d",
+        "text": "1 year"
+      }
+    ],
+    "domain": "Field Investigation"
+  },
+  {
+    "id": 7,
+    "type": "mc",
+    "points": 1,
+    "q": "A patient is diagnosed with primary syphilis. A sexual partner from 75 days ago is identified. According to standard partner management protocols, this partner should:",
+    "options": [
+      {
+        "key": "a",
+        "text": "Only be tested"
+      },
+      {
+        "key": "b",
+        "text": "Be presumptively treated according to local protocol"
+      },
+      {
+        "key": "c",
+        "text": "Not be contacted"
+      },
+      {
+        "key": "d",
+        "text": "Only be contacted if symptomatic"
+      }
+    ],
+    "domain": "Field Investigation"
+  },
+  {
+    "id": 8,
+    "type": "mc",
+    "points": 1,
+    "q": "A DIS is interviewing a patient with early non-primary non-secondary syphilis. The patient reports having a new painless chancre four months ago that went away on its own. When defining the critical period and staging rationale, this is best documented as:",
+    "options": [
+      {
+        "key": "a",
+        "text": "Historical primary lesion"
+      },
+      {
+        "key": "b",
+        "text": "Secondary symptom"
+      },
+      {
+        "key": "c",
+        "text": "False positive symptom"
+      },
+      {
+        "key": "d",
+        "text": "Latent symptom"
+      }
+    ],
+    "domain": "Field Investigation"
+  },
+  {
+    "id": 9,
+    "type": "mc",
+    "points": 1,
+    "q": "According to the reporting change discussed in training, congenital syphilis cases are classified/reported based on:",
+    "options": [
+      {
+        "key": "a",
+        "text": "The mother's residence at delivery"
+      },
+      {
+        "key": "b",
+        "text": "The infant's place of birth"
+      },
+      {
+        "key": "c",
+        "text": "The state where the mother first tested positive"
+      },
+      {
+        "key": "d",
+        "text": "The state where prenatal care began"
+      }
+    ],
+    "domain": "Congenital Syphilis"
+  },
+  {
+    "id": 10,
+    "type": "mc",
+    "points": 1,
+    "q": "An infant has a reactive RPR of 1:4, and the mother had untreated syphilis at delivery. The infant is asymptomatic. This case is:",
+    "options": [
+      {
+        "key": "a",
+        "text": "Confirmed congenital syphilis"
+      },
+      {
+        "key": "b",
+        "text": "Probable congenital syphilis"
+      },
+      {
+        "key": "c",
+        "text": "Not a case; positive IgM is required"
+      },
+      {
+        "key": "d",
+        "text": "Not a case if the infant has no symptoms"
+      }
+    ],
+    "domain": "Congenital Syphilis"
+  },
+  {
+    "id": 11,
+    "type": "mc",
+    "points": 1,
+    "q": "Scenario: A patient presents with a genital chancre and a diffuse copper-colored rash involving the trunk, palms, and soles. Current RPR is reactive and treponemal test is reactive. What stage should be selected?",
+    "options": [
+      {
+        "key": "a",
+        "text": "Primary Syphilis, because the chancre is present"
+      },
+      {
+        "key": "b",
+        "text": "Secondary Syphilis"
+      },
+      {
+        "key": "c",
+        "text": "Early Non-Primary Non-Secondary, because more than one sign is present"
+      },
+      {
+        "key": "d",
+        "text": "Unknown Duration"
+      }
+    ],
+    "domain": "Case Review"
+  },
+  {
+    "id": 12,
+    "type": "mc",
+    "points": 1,
+    "q": "Scenario: A patient is asymptomatic. Current treponemal test is reactive and current RPR is reactive. A prior RPR from 13 months ago was negative. There are no documented symptoms, no partner linkage, and no other evidence that acquisition occurred within the previous 12 months. What is the correct stage?",
+    "options": [
+      {
+        "key": "a",
+        "text": "Early Non-Primary Non-Secondary"
+      },
+      {
+        "key": "b",
+        "text": "Unknown Duration"
+      },
+      {
+        "key": "c",
+        "text": "Not a case"
+      },
+      {
+        "key": "d",
+        "text": "Primary Syphilis"
+      }
+    ],
+    "domain": "Case Review"
+  },
+  {
+    "id": 13,
+    "type": "write",
+    "points": 2,
+    "q": "Scenario: A patient has no current signs. Current RPR and treponemal test are reactive. During the interview, the patient clearly describes a painless genital ulcer 7 months ago that lasted 2 weeks and resolved without treatment. Write the likely stage AND the specific type of acquisition evidence being used.",
+    "domain": "Case Investigation"
+  },
+  {
+    "id": 14,
+    "type": "mc",
+    "points": 1,
+    "q": "Scenario: Patient has a classic palmar/plantar rash and mucous patches. Current RPR is 1:64. No treponemal test has been ordered yet. There is no concurrent nonreactive treponemal result. What is the best classification path?",
+    "options": [
+      {
+        "key": "a",
+        "text": "Probable Secondary Syphilis, Path B: clinical criteria plus RPR >=1:32 with treponemal absent/pending"
+      },
+      {
+        "key": "b",
+        "text": "Confirmed Secondary Syphilis, because RPR is >=1:32"
+      },
+      {
+        "key": "c",
+        "text": "Early Non-Primary Non-Secondary, because treponemal testing is missing"
+      },
+      {
+        "key": "d",
+        "text": "Not a case until a treponemal result is reactive"
+      }
+    ],
+    "domain": "Laboratory"
+  },
+  {
+    "id": 15,
+    "type": "write",
+    "points": 2,
+    "q": "Scenario: A patient has no current primary or secondary symptoms. Current RPR and treponemal test are reactive. The patient reports sexual exposure 4 months ago to a partner independently documented as having secondary syphilis. Write the stage AND the acquisition criterion used.",
+    "domain": "Case Investigation"
+  },
+  {
+    "id": 16,
+    "type": "mc",
+    "points": 1,
+    "q": "Scenario: An asymptomatic patient has current reactive RPR and reactive treponemal test. There is no documented history of syphilis and no evidence of acquisition within the previous 12 months. Which classification path best applies?",
+    "options": [
+      {
+        "key": "a",
+        "text": "Early Non-Primary Non-Secondary, because the serology is reactive"
+      },
+      {
+        "key": "b",
+        "text": "Syphilis, Unknown Duration - Probable Path A: no documented history plus presumptive serology and no <=12-month acquisition evidence"
+      },
+      {
+        "key": "c",
+        "text": "Secondary Syphilis - Probable Path B"
+      },
+      {
+        "key": "d",
+        "text": "Primary Syphilis - Probable"
+      }
+    ],
+    "domain": "Case Review"
+  },
+  {
+    "id": 17,
+    "type": "write",
+    "points": 3,
+    "q": "Scenario: A patient has no current primary or secondary signs. RPR and treponemal test are reactive. There is no evidence of acquisition within the previous 12 months. The patient reports new vision changes and an ophthalmologist documents posterior uveitis on examination. No direct-detection laboratory testing was performed on the affected fluid. Write the base stage, the appropriate sub-classification, AND whether that sub-classification should be recorded as likely or verified (probable or confirmed).",
+    "domain": "Sub-classification"
+  },
+  {
+    "id": 18,
+    "type": "ms",
+    "points": 2,
+    "q": "Scenario: Patient has reactive RPR and reactive treponemal test, neurologic signs consistent with meningovascular syphilis, and CSF RPR is reactive in a specimen without visible blood contamination. Which statements are correct? Select all that apply.",
+    "options": [
+      {
+        "key": "a",
+        "text": "CSF RPR can support Verified Neurologic Syphilis under the current framework"
+      },
+      {
+        "key": "b",
+        "text": "CSF RPR is ignored; only CSF VDRL can be used"
+      },
+      {
+        "key": "c",
+        "text": "Neurologic manifestations are additive and do not replace the base syphilis stage"
+      },
+      {
+        "key": "d",
+        "text": "This automatically makes the base stage Primary Syphilis"
+      }
+    ],
+    "partialCredit": true,
+    "domain": "Sub-classification"
+  },
+  {
+    "id": 19,
+    "type": "write",
+    "points": 2,
+    "q": "Scenario: Patient has a diffuse rash consistent with secondary syphilis and current RPR of 1:64. A treponemal test returns nonreactive. Explain whether Secondary Probable Path B is still available AND why.",
+    "domain": "Laboratory"
+  },
+  {
+    "id": 20,
+    "type": "mc",
+    "points": 1,
+    "q": "Scenario: A case was initially staged as Syphilis, Unknown Duration because there was no evidence of acquisition within the previous 12 months. During a later DIS interview, the patient gives a specific, credible history of a painless genital ulcer 6 months ago. There are no current primary or secondary signs. What should the DIS do?",
+    "options": [
+      {
+        "key": "a",
+        "text": "Keep Unknown Duration because staging cannot be changed after initial entry"
+      },
+      {
+        "key": "b",
+        "text": "Re-stage as Early Non-Primary Non-Secondary using prior primary signs within 12 months as acquisition evidence"
+      },
+      {
+        "key": "c",
+        "text": "Re-stage as Primary Syphilis because the patient once had a chancre"
+      },
+      {
+        "key": "d",
+        "text": "Create a new separate case"
+      }
+    ],
+    "domain": "Case Review"
+  }
+]

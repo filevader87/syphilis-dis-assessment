@@ -1,0 +1,15 @@
+{
+  "name": "syphilis-dis-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Syphilis 2026 DIS Assessment — Netlify deployment",
+  "scripts": {
+    "test": "node test.js",
+    "build": "node scripts/build-questions.js",
+    "dev": "node scripts/build-questions.js && netlify dev",
+    "deploy": "node test.js && node scripts/build-questions.js && netlify deploy --prod"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}

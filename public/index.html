@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Syphilis 2026 DIS Program</title>
+<style>
+  :root { --bg:#f5f7fa; --card:#fff; --primary:#0b5ed7; --text:#1f2937; --muted:#6b7280; --border:#e5e7eb; --good:#16a34a; --bad:#dc2626; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:linear-gradient(135deg,#eef2ff 0%,#f5f7fa 50%,#fef3c7 100%); color:var(--text); min-height:100vh; font-size:18px; line-height:1.55; }
+  header { padding:48px 24px 24px; text-align:center; }
+  header h1 { margin:0; font-size:32px; font-weight:600; color:var(--primary); letter-spacing:-.01em; }
+  header p { margin:10px 0 0; font-size:17px; color:var(--muted); max-width:640px; margin-left:auto; margin-right:auto; }
+  main { max-width:1080px; margin:32px auto 60px; padding:0 24px; }
+  .stage-grid { display:grid; gap:24px; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); }
+  .stage {
+    background:var(--card); border:1px solid var(--border); border-radius:16px; padding:36px 32px;
+    box-shadow:0 2px 6px rgba(0,0,0,.06); cursor:pointer; transition:transform .15s, box-shadow .15s, border-color .15s;
+    text-align:left; text-decoration:none; color:inherit; display:flex; flex-direction:column;
+  }
+  .stage:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(11,94,215,.15); border-color:var(--primary); }
+  .stage .icon { width:56px; height:56px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:28px; margin-bottom:18px; }
+  .stage.assess .icon { background:#dbeafe; color:var(--primary); }
+  .stage.admin .icon { background:#fef3c7; color:#92400e; }
+  .stage h2 { margin:0 0 8px; font-size:22px; font-weight:600; }
+  .stage p { margin:0 0 16px; color:var(--muted); font-size:15px; flex-grow:1; }
+  .stage .features { margin:0 0 18px; padding:0; list-style:none; font-size:14px; color:var(--text); }
+  .stage .features li { padding:4px 0 4px 22px; position:relative; }
+  .stage .features li::before { content:"✓"; position:absolute; left:0; color:var(--good); font-weight:700; }
+  .stage .cta { font-weight:600; color:var(--primary); font-size:15px; }
+  .stage .cta::after { content:" →"; transition:transform .15s; display:inline-block; }
+  .stage:hover .cta::after { transform:translateX(4px); }
+  footer { text-align:center; color:var(--muted); font-size:13px; padding:0 24px 32px; }
+
+  /* Modal */
+  .modal-bg { position:fixed; inset:0; background:rgba(15,23,42,.55); display:none; align-items:center; justify-content:center; padding:20px; z-index:50; }
+  .modal-bg.open { display:flex; }
+  .modal { background:#fff; border-radius:14px; padding:28px; max-width:440px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,.3); }
+  .modal h3 { margin:0 0 8px; font-size:20px; }
+  .modal p { color:var(--muted); font-size:14px; margin:0 0 16px; }
+  .modal input { width:100%; padding:12px; border:1px solid var(--border); border-radius:8px; font-size:16px; }
+  .modal .row { display:flex; gap:8px; margin-top:14px; }
+  .modal button { flex:1; padding:11px; border:0; border-radius:8px; font-size:15px; font-weight:600; cursor:pointer; }
+  .modal .primary { background:var(--primary); color:#fff; }
+  .modal .ghost { background:#f3f4f6; color:var(--text); }
+  .modal .err { color:var(--bad); font-size:13px; margin-top:10px; min-height:18px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Syphilis 2026 DIS Program</h1>
+  <p>Disease Intervention Specialist case definition assessment and program analytics for supervisors.</p>
+</header>
+<main>
+  <div class="stage-grid">
+
+    <a class="stage assess" href="assessment.html">
+      <div class="icon">📋</div>
+      <h2>DIS Assessment</h2>
+      <p>20-question competency check covering staging, lab interpretation, partner services, congenital syphilis, and sub-classifications.</p>
+      <span class="cta">Start the assessment</span>
+    </a>
+
+    <button class="stage admin" id="adminCard" type="button" style="border:1px solid var(--border); font-family:inherit; background:var(--card);">
+      <div class="icon">📊</div>
+      <h2>Admin Dashboard</h2>
+      <p>Program-wide analytics for supervisors and managers. Requires the shared admin secret.</p>
+      <span class="cta">Sign in to dashboard</span>
+    </button>
+
+  </div>
+</main>
+<footer>&nbsp;</footer>
+
+<div class="modal-bg" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <h3 id="modalTitle">Admin sign-in</h3>
+    <p>Enter the shared admin secret distributed to program supervisors.</p>
+    <input id="secret" type="password" placeholder="Shared secret" autocomplete="current-password" />
+    <div class="err" id="err"></div>
+    <div class="row">
+      <button class="ghost" type="button" onclick="closeModal()">Cancel</button>
+      <button class="primary" type="button" onclick="trySignIn()">Sign in</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SECRET_KEY = 'dis_admin_secret';
+const modal = document.getElementById('modal');
+const err = document.getElementById('err');
+
+document.getElementById('adminCard').addEventListener('click', () => {
+  const cached = sessionStorage.getItem(SECRET_KEY);
+  if (cached) {
+    location.href = 'admin/dashboard.html';
+  } else {
+    openModal();
+  }
+});
+
+function openModal() {
+  err.textContent = '';
+  modal.classList.add('open');
+  setTimeout(() => document.getElementById('secret').focus(), 30);
+}
+function closeModal() { modal.classList.remove('open'); }
+
+async function trySignIn() {
+  const v = document.getElementById('secret').value.trim();
+  if (!v) { err.textContent = 'Enter the shared secret.'; return; }
+  err.textContent = 'Verifying…';
+  try {
+    const r = await fetch('/.netlify/functions/analytics', { headers: { 'x-admin-secret': v } });
+    if (r.status === 401) { err.textContent = 'Invalid secret.'; return; }
+    if (!r.ok) { err.textContent = 'Server error (HTTP ' + r.status + '). If you used Netlify Drop, functions are not enabled — deploy via the Netlify CLI.'; return; }
+    sessionStorage.setItem(SECRET_KEY, v);
+    location.href = 'admin/dashboard.html';
+  } catch (e) {
+    err.textContent = 'Network error — could not reach the analytics function.';
+  }
+}
+
+document.getElementById('secret').addEventListener('keydown', e => { if (e.key === 'Enter') trySignIn(); });
+modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+node_modules/
+.env
+.netlify/
+data/submissions.json
+.DS_Store
+*.log

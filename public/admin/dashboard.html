@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DIS Admin Dashboard — Syphilis 2026</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:#f5f7fa; --card:#fff; --primary:#0b5ed7; --text:#1f2937;
+    --muted:#6b7280; --border:#e5e7eb;
+    --good:#16a34a; --warn:#eab308; --bad:#dc2626;
+    --r1:#6366f1; --r2:#f59e0b;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); font-size:15px; }
+  header { background:var(--primary); color:#fff; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+  header h1 { margin:0; font-size:19px; font-weight:600; }
+  .hactions { display:flex; gap:8px; align-items:center; }
+  .hactions button, .hactions a.btn {
+    background:#fff; color:var(--primary); border:0; padding:7px 14px; border-radius:6px;
+    font-weight:600; cursor:pointer; text-decoration:none; font-size:13px;
+  }
+  .hactions button.ghost { background:transparent; color:#fff; border:1px solid rgba(255,255,255,.55); }
+  main { max-width:1240px; margin:22px auto; padding:0 16px; }
+
+  /* Section label */
+  .section-title {
+    font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--muted); margin:28px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--border);
+  }
+
+  /* Card grid */
+  .kpi-grid { display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); margin-bottom:4px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:16px; box-shadow:0 1px 2px rgba(0,0,0,.04); }
+  .kpi .label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .kpi .val   { font-size:26px; font-weight:700; margin-top:4px; }
+
+  /* Two-column row */
+  .row2 { display:grid; gap:14px; grid-template-columns:1fr 1fr; margin-bottom:14px; }
+  @media(max-width:820px){ .row2 { grid-template-columns:1fr; } }
+
+  /* Region comparison */
+  .region-grid { display:grid; gap:14px; grid-template-columns:1fr 1fr; margin-bottom:14px; }
+  @media(max-width:820px){ .region-grid { grid-template-columns:1fr; } }
+  .region-card { border-radius:10px; padding:18px; }
+  .region-card.r1 { background:#eef2ff; border:2px solid var(--r1); }
+  .region-card.r2 { background:#fffbeb; border:2px solid var(--r2); }
+  .region-card h3 { margin:0 0 12px; font-size:15px; }
+  .region-card h3.r1 { color:var(--r1); }
+  .region-card h3.r2 { color:#b45309; }
+  .mini-kpi-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+  .mini-kpi { flex:1; min-width:90px; background:rgba(255,255,255,.7); border-radius:8px; padding:10px; text-align:center; }
+  .mini-kpi .ml { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .mini-kpi .mv { font-size:20px; font-weight:700; margin-top:2px; }
+  .domain-bar-row { display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px dashed var(--border); font-size:13px; }
+  .domain-bar-row:last-child { border:0; }
+  .bar-wrap { width:120px; height:7px; background:#e5e7eb; border-radius:4px; overflow:hidden; display:inline-block; margin:0 8px; vertical-align:middle; }
+  .bar-fill { height:100%; border-radius:4px; }
+
+  /* Shared styles */
+  h2 { font-size:13px; margin:0 0 12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th,td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--border); }
+  th { color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; }
+  .alert-box { padding:9px 12px; border-radius:6px; margin-bottom:8px; font-size:13px; }
+  .alert-box.critical { background:#fee2e2; color:#991b1b; border-left:4px solid var(--bad); }
+  .alert-box.warning  { background:#fef3c7; color:#92400e; border-left:4px solid var(--warn); }
+  .empty { color:var(--muted); font-style:italic; padding:6px 0; }
+  .rank-1 { font-weight:700; color:var(--good); }
+  .band-pill { padding:2px 7px; border-radius:999px; font-size:10px; font-weight:700; text-transform:uppercase; }
+  .band-proficient         { background:#dcfce7; color:#166534; }
+  .band-needs_reinforcement { background:#fef3c7; color:#92400e; }
+  .band-needs_retraining   { background:#fee2e2; color:#991b1b; }
+  .pct-good { color:var(--good); font-weight:600; }
+  .pct-warn { color:var(--warn); font-weight:600; }
+  .pct-bad  { color:var(--bad);  font-weight:600; }
+  .tag-r1 { background:#eef2ff; color:var(--r1); padding:1px 7px; border-radius:999px; font-size:10px; font-weight:600; }
+  .tag-r2 { background:#fffbeb; color:#b45309;   padding:1px 7px; border-radius:999px; font-size:10px; font-weight:600; }
+  .muted  { color:var(--muted); font-size:11px; }
+  details { margin-top:5px; }
+  summary { cursor:pointer; color:var(--primary); font-size:13px; }
+  pre.resp { background:#f9fafb; border:1px solid var(--border); padding:8px; border-radius:6px; white-space:pre-wrap; font-size:12px; margin:5px 0 0; }
+
+  /* Login */
+  .login-wrap { max-width:400px; margin:80px auto; }
+  .login-wrap input { width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; font-size:15px; margin-top:6px; }
+  .login-wrap button { background:var(--primary); color:#fff; border:0; padding:10px 20px; border-radius:6px; font-weight:600; cursor:pointer; margin-top:10px; }
+  .login-err { color:var(--bad); font-size:13px; margin-top:8px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+const SECRET_KEY = 'dis_admin_secret';
+let secret = sessionStorage.getItem(SECRET_KEY) || '';
+let charts = {};
+
+const pctClass  = p => p >= 85 ? 'pct-good' : p >= 70 ? 'pct-warn' : 'pct-bad';
+const barColor  = p => p >= 85 ? '#16a34a'  : p >= 70 ? '#eab308'  : '#dc2626';
+const escHtml   = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const regionTag = r => r === 'Region 1'
+  ? `<span class="tag-r1">Region 1</span>`
+  : r === 'Region 2'
+    ? `<span class="tag-r2">Region 2</span>`
+    : `<span class="muted">${escHtml(r)}</span>`;
+
+// ─── Auth ────────────────────────────────────────────────────────────────────
+function loginScreen(msg) {
+  document.getElementById('app').innerHTML = `
+    <div class="card login-wrap">
+      <h2 style="font-size:18px;color:var(--text);text-transform:none;letter-spacing:0;margin-bottom:4px;">Admin sign-in</h2>
+      <p class="muted">Enter the shared admin secret distributed to program supervisors.</p>
+      <input id="sec" type="password" placeholder="Shared secret" />
+      <div><button onclick="signIn()">Sign in</button></div>
+      ${msg ? `<p class="login-err">${escHtml(msg)}</p>` : ''}
+    </div>`;
+  document.getElementById('sec').addEventListener('keydown', e => { if (e.key==='Enter') signIn(); });
+}
+function signIn() {
+  const v = document.getElementById('sec').value.trim();
+  if (!v) return;
+  secret = v; sessionStorage.setItem(SECRET_KEY, secret); load();
+}
+function signOut() { sessionStorage.removeItem(SECRET_KEY); secret=''; loginScreen(); }
+
+// ─── Shell ───────────────────────────────────────────────────────────────────
+function shell() {
+  document.getElementById('app').innerHTML = `
+    <header>
+      <h1>DIS Admin Dashboard — Syphilis 2026</h1>
+      <div class="hactions">
+        <a class="btn" id="csvBtn" href="#">⇩ Export CSV</a>
+        <button onclick="load()">↻ Refresh</button>
+        <button class="ghost" onclick="signOut()">Sign out</button>
+      </div>
+    </header>
+    <main>
+      <div class="section-title">Program overview</div>
+      <div class="kpi-grid" id="kpis"></div>
+
+      <div class="section-title">Alerts</div>
+      <div class="card" style="margin-bottom:14px;"><div id="alerts"></div></div>
+
+      <div class="section-title">Region comparison</div>
+      <div class="region-grid" id="regionCards"></div>
+      <div class="card" style="margin-bottom:14px;">
+        <h2>Domain mastery — Region 1 vs Region 2</h2>
+        <canvas id="regionDomainChart" height="220"></canvas>
+      </div>
+      <div class="card" style="margin-bottom:14px;">
+        <h2>Proficiency band distribution by region</h2>
+        <canvas id="regionBandChart" height="160"></canvas>
+      </div>
+
+      <div class="section-title">Program-wide analytics</div>
+      <div class="row2">
+        <div class="card"><h2>Domain performance (all testers)</h2><canvas id="domainChart" height="240"></canvas></div>
+        <div class="card"><h2>Program proficiency bands</h2><canvas id="bandChart" height="240"></canvas></div>
+      </div>
+      <div class="card" style="margin-bottom:14px;"><h2>Submissions over time</h2><canvas id="timelineChart" height="190"></canvas></div>
+
+      <div class="section-title">Tester rankings</div>
+      <div class="card" style="margin-bottom:14px;">
+        <table>
+          <thead><tr><th>#</th><th>Token</th><th>Region</th><th>Score</th><th>%</th><th>Band</th><th>Submitted</th><th></th></tr></thead>
+          <tbody id="rankings"></tbody>
+        </table>
+        <p class="muted" style="margin-top:10px;">
+          <strong>Reset</strong> archives a prior attempt and allows the tester to retake after additional training.
+        </p>
+      </div>
+
+      <div class="section-title">Question difficulty (sorted hardest first)</div>
+      <div class="card" style="margin-bottom:14px;">
+        <table>
+          <thead><tr><th>Q#</th><th>Domain</th><th>Attempts</th><th>% mastery</th></tr></thead>
+          <tbody id="qDifficulty"></tbody>
+        </table>
+      </div>
+
+      <div class="section-title">Write-in responses flagged for review</div>
+      <div class="card" style="margin-bottom:14px;"><div id="flagged"></div></div>
+
+      <p class="muted" style="margin-top:6px;margin-bottom:32px;">
+        Last loaded: <span id="loadedAt">—</span> &nbsp;·&nbsp;
+        Thresholds: ≥85% proficient &nbsp;·&nbsp; 70–84% reinforcement &nbsp;·&nbsp; &lt;70% retraining
+      </p>
+    </main>`;
+}
+
+// ─── Load ────────────────────────────────────────────────────────────────────
+async function load() {
+  if (!secret) return loginScreen();
+  shell();
+  let m;
+  try {
+    const r = await fetch('/.netlify/functions/analytics', { headers: {'x-admin-secret': secret} });
+    if (r.status === 401) { sessionStorage.removeItem(SECRET_KEY); secret=''; return loginScreen('Invalid secret.'); }
+    m = await r.json();
+  } catch {
+    document.getElementById('kpis').innerHTML = '<p class="empty">Failed to load analytics — check that functions are deployed (not Netlify Drop).</p>';
+    return;
+  }
+  document.getElementById('csvBtn').addEventListener('click', e => { e.preventDefault(); downloadCsv(); });
+  document.getElementById('loadedAt').textContent = new Date().toLocaleString();
+
+  destroyCharts();
+  renderKpis(m);
+  renderAlerts(m);
+  renderRegionCards(m);
+  renderRegionDomainChart(m);
+  renderRegionBandChart(m);
+  renderDomainChart(m);
+  renderBandChart(m);
+  renderTimeline(m);
+  renderRankings(m);
+  renderQuestionDifficulty(m);
+  renderFlagged(m);
+}
+
+function destroyCharts() {
+  Object.values(charts).forEach(c => c && c.destroy());
+  charts = {};
+}
+
+// ─── KPIs ────────────────────────────────────────────────────────────────────
+function renderKpis(m) {
+  const k = m.program || {};
+  document.getElementById('kpis').innerHTML = `
+    <div class="card kpi"><div class="label">Total submissions</div><div class="val">${k.totalSubmissions||0}</div></div>
+    <div class="card kpi"><div class="label">Unique testers</div><div class="val">${k.uniqueTesters||0}</div></div>
+    <div class="card kpi"><div class="label">Program avg %</div><div class="val ${pctClass(k.avgPct||0)}">${k.avgPct||0}%</div></div>
+    <div class="card kpi"><div class="label">Proficient ≥85%</div><div class="val pct-good">${k.proficientRate||0}%</div></div>
+    <div class="card kpi"><div class="label">Needs reinforcement</div><div class="val pct-warn">${k.reinforcementRate||0}%</div></div>
+    <div class="card kpi"><div class="label">Needs retraining</div><div class="val pct-bad">${k.retrainingRate||0}%</div></div>`;
+}
+
+// ─── Alerts ──────────────────────────────────────────────────────────────────
+function renderAlerts(m) {
+  const a = m.alerts || [];
+  document.getElementById('alerts').innerHTML = a.length
+    ? a.map(x => `<div class="alert-box ${x.level}"><strong>${x.level.toUpperCase()}:</strong> ${escHtml(x.message)}</div>`).join('')
+    : '<div class="empty">No alerts — all thresholds within range.</div>';
+}
+
+// ─── Region comparison cards ─────────────────────────────────────────────────
+function renderRegionCards(m) {
+  const regions = m.regions || {};
+  const order   = ['Region 1','Region 2'];
+  const keys    = [...order.filter(r => regions[r]), ...Object.keys(regions).filter(r => !order.includes(r))];
+
+  if (!keys.length) {
+    document.getElementById('regionCards').innerHTML = '<p class="empty" style="grid-column:1/-1">No region data yet — make sure tester links include <code>?region=Region 1</code> or <code>?region=Region 2</code>.</p>';
+    return;
+  }
+
+  document.getElementById('regionCards').innerHTML = keys.map((reg, idx) => {
+    const rb  = regions[reg];
+    const cls = idx === 0 ? 'r1' : 'r2';
+    const domRows = Object.entries(rb.domains || {}).map(([dom, d]) => `
+      <div class="domain-bar-row">
+        <span style="flex:1;">${escHtml(dom)}</span>
+        <span class="bar-wrap"><span class="bar-fill" style="width:${d.pct}%;background:${barColor(d.pct)};"></span></span>
+        <span class="${pctClass(d.pct)}" style="min-width:36px;text-align:right;">${d.pct}%</span>
+      </div>`).join('');
+
+    return `
+      <div class="region-card ${cls}">
+        <h3 class="${cls}">${escHtml(reg)}</h3>
+        <div class="mini-kpi-row">
+          <div class="mini-kpi"><div class="ml">Testers</div><div class="mv">${rb.totalSubmissions}</div></div>
+          <div class="mini-kpi"><div class="ml">Avg %</div><div class="mv ${pctClass(rb.avgPct)}">${rb.avgPct}%</div></div>
+          <div class="mini-kpi"><div class="ml">Proficient</div><div class="mv pct-good">${rb.proficientRate}%</div></div>
+          <div class="mini-kpi"><div class="ml">Retraining</div><div class="mv pct-bad">${rb.retrainingRate}%</div></div>
+        </div>
+        <div style="margin-top:8px;">${domRows || '<span class="empty">No domain data.</span>'}</div>
+      </div>`;
+  }).join('');
+}
+
+// ─── Region domain grouped bar chart ─────────────────────────────────────────
+function renderRegionDomainChart(m) {
+  const regions   = m.regions || {};
+  const r1        = regions['Region 1'] || {};
+  const r2        = regions['Region 2'] || {};
+  const allDomains = [...new Set([...Object.keys(r1.domains||{}), ...Object.keys(r2.domains||{})])];
+
+  charts.regionDomain = new Chart(document.getElementById('regionDomainChart'), {
+    type: 'bar',
+    data: {
+      labels: allDomains,
+      datasets: [
+        { label:'Region 1', data: allDomains.map(d => (r1.domains||{})[d]?.pct ?? 0), backgroundColor:'rgba(99,102,241,.8)' },
+        { label:'Region 2', data: allDomains.map(d => (r2.domains||{})[d]?.pct ?? 0), backgroundColor:'rgba(245,158,11,.8)' }
+      ]
+    },
+    options: {
+      indexAxis:'y', scales:{ x:{ beginAtZero:true, max:100, ticks:{callback:v=>v+'%'} } },
+      plugins:{ legend:{ position:'top' }, tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${ctx.parsed.x}%` } } }
+    }
+  });
+}
+
+// ─── Region band stacked bar ──────────────────────────────────────────────────
+function renderRegionBandChart(m) {
+  const regions = m.regions || {};
+  const labels  = Object.keys(regions);
+  const get = (reg, band) => (regions[reg]?.bandCounts?.[band] || 0);
+
+  charts.regionBand = new Chart(document.getElementById('regionBandChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label:'Proficient (≥85%)',        data:labels.map(r=>get(r,'proficient')),          backgroundColor:'#16a34a' },
+        { label:'Needs reinforcement (70–84%)', data:labels.map(r=>get(r,'needs_reinforcement')), backgroundColor:'#eab308' },
+        { label:'Needs retraining (<70%)',   data:labels.map(r=>get(r,'needs_retraining')),    backgroundColor:'#dc2626' }
+      ]
+    },
+    options: {
+      plugins:{ legend:{ position:'bottom' } },
+      scales:{ x:{ stacked:true }, y:{ stacked:true, ticks:{ stepSize:1 } } }
+    }
+  });
+}
+
+// ─── Program domain bar ───────────────────────────────────────────────────────
+function renderDomainChart(m) {
+  const domains = m.domains || {};
+  const labels  = Object.keys(domains);
+  const data    = labels.map(d => domains[d].pct);
+  charts.domain = new Chart(document.getElementById('domainChart'), {
+    type:'bar',
+    data:{ labels, datasets:[{ label:'% mastery', data, backgroundColor:data.map(barColor) }] },
+    options:{ indexAxis:'y', scales:{ x:{ beginAtZero:true, max:100, ticks:{callback:v=>v+'%'} } }, plugins:{ legend:{ display:false } } }
+  });
+}
+
+// ─── Band doughnut ────────────────────────────────────────────────────────────
+function renderBandChart(m) {
+  const b = m.bandCounts || {};
+  charts.band = new Chart(document.getElementById('bandChart'), {
+    type:'doughnut',
+    data:{
+      labels:['Proficient (≥85%)','Needs reinforcement (70–84%)','Needs retraining (<70%)'],
+      datasets:[{ data:[b.proficient||0,b.needs_reinforcement||0,b.needs_retraining||0],
+        backgroundColor:['#16a34a','#eab308','#dc2626'] }]
+    },
+    options:{ plugins:{ legend:{ position:'bottom' } } }
+  });
+}
+
+// ─── Timeline ─────────────────────────────────────────────────────────────────
+function renderTimeline(m) {
+  const tl = m.timeline || [];
+  charts.timeline = new Chart(document.getElementById('timelineChart'), {
+    type:'line',
+    data:{
+      labels: tl.map(t=>t.day),
+      datasets:[
+        { label:'Submissions', data:tl.map(t=>t.count), borderColor:'#0b5ed7', backgroundColor:'rgba(11,94,215,.12)', yAxisID:'y' },
+        { label:'Avg %',       data:tl.map(t=>t.avgPct), borderColor:'#16a34a', backgroundColor:'rgba(22,163,74,.12)', yAxisID:'y1' }
+      ]
+    },
+    options:{
+      scales:{
+        y:  { beginAtZero:true, position:'left',  title:{ display:true, text:'Submissions' } },
+        y1: { beginAtZero:true, max:100, position:'right', grid:{ drawOnChartArea:false }, title:{ display:true, text:'Avg %' } }
+      }
+    }
+  });
+}
+
+// ─── Rankings ────────────────────────────────────────────────────────────────
+function renderRankings(m) {
+  const rk = m.rankings || [];
+  document.getElementById('rankings').innerHTML = rk.length
+    ? rk.map((r,i) => `<tr>
+        <td class="${i===0?'rank-1':''}">${i+1}</td>
+        <td>${escHtml(r.token)}</td>
+        <td>${regionTag(r.region)}</td>
+        <td>${r.earned}/${r.max}</td>
+        <td class="${pctClass(r.pct)}">${r.pct}%</td>
+        <td><span class="band-pill band-${r.band}">${(r.band||'').replace(/_/g,' ')}</span></td>
+        <td class="muted">${(r.timestamp||'').replace('T',' ').slice(0,16)}</td>
+        <td><button onclick="resetToken('${escHtml(r.token)}')"
+          style="background:#fff;color:var(--bad);border:1px solid var(--bad);padding:3px 9px;border-radius:5px;cursor:pointer;font-size:11px;">
+          Reset</button></td>
+      </tr>`).join('')
+    : '<tr><td colspan="8" class="empty">No submissions yet.</td></tr>';
+}
+
+// ─── Question difficulty ──────────────────────────────────────────────────────
+function renderQuestionDifficulty(m) {
+  const qs = Object.values(m.questionDifficulty || {}).sort((a,b) => a.pct - b.pct);
+  document.getElementById('qDifficulty').innerHTML = qs.length
+    ? qs.map(q => `<tr>
+        <td>Q${q.id}</td>
+        <td>${escHtml(q.domain)}</td>
+        <td>${q.attempts}</td>
+        <td class="${pctClass(q.pct)}">${q.pct}%</td>
+      </tr>`).join('')
+    : '<tr><td colspan="4" class="empty">No data yet.</td></tr>';
+}
+
+// ─── Flagged write-ins ────────────────────────────────────────────────────────
+function renderFlagged(m) {
+  const f = m.flaggedReviews || [];
+  document.getElementById('flagged').innerHTML = f.length
+    ? f.map(r => `<details>
+        <summary>
+          <strong>Q${r.questionId}</strong> · ${escHtml(r.token)} · ${regionTag(r.region)} ·
+          ${escHtml(r.domain)} · rubric ${r.rubricMatched||0}/${r.rubricTotal||0} ·
+          <span class="muted">${(r.timestamp||'').replace('T',' ').slice(0,16)}</span>
+        </summary>
+        <pre class="resp">${escHtml(r.response||'(no response)')}</pre>
+      </details>`).join('')
+    : '<div class="empty">No write-in responses awaiting review.</div>';
+}
+
+// ─── Actions ──────────────────────────────────────────────────────────────────
+async function resetToken(token) {
+  if (!confirm(`Reset "${token}"?\n\nTheir prior attempt will be archived and they can retake the assessment.`)) return;
+  const r = await fetch('/.netlify/functions/reset-token', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-admin-secret':secret},
+    body: JSON.stringify({ token })
+  });
+  if (!r.ok) return alert('Reset failed: HTTP ' + r.status);
+  const d = await r.json();
+  alert(`Done — archived ${d.archivedCount} attempt(s) for "${token}". They can now retake.`);
+  load();
+}
+
+async function downloadCsv() {
+  const r = await fetch('/.netlify/functions/submissions?format=csv', { headers:{'x-admin-secret':secret} });
+  if (!r.ok) return alert('Export failed: HTTP ' + r.status);
+  const blob = await r.blob();
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), { href:url, download:'dis-submissions.csv' });
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+if (!secret) loginScreen(); else load();
+</script>
+</body>
+</html>
