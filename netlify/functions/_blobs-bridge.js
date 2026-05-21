@@ -41,4 +41,17 @@ async function append(record) {
   } catch (_) { return 'none'; }
 }
 
-module.exports = { load, append };
+async function saveAll(arr) {
+  if (sdk) { try { await sdk.setJSON('submissions.json', arr); return 'blobs'; } catch (_) {} }
+  if (!API) return 'none';
+  try {
+    const meta = await fetch(`${API}/submissions.json`, { method: 'PUT', headers: HDR });
+    if (!meta.ok) return 'none';
+    const { url } = await meta.json();
+    if (!url) return 'none';
+    const put = await fetch(url, { method: 'PUT', body: JSON.stringify(arr), headers: { 'Content-Type': 'application/octet-stream' } });
+    return put.ok ? 'api' : 'none';
+  } catch (_) { return 'none'; }
+}
+
+module.exports = { load, append, saveAll };

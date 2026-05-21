@@ -1,7 +1,7 @@
 const QUESTIONS = require('./_questions.json');
 const { load: loadSubmissions, append: appendRecord } = require('./_blobs-bridge');
 
-const PASS_PROFICIENT = 85;
+const PASS_PROFICIENT = 80;
 const PASS_REINFORCE = 70;
 
 function band(pct) {

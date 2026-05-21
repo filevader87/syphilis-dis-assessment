@@ -4,6 +4,10 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>DIS Admin Dashboard — Syphilis 2026</title>
+<link rel="icon" type="image/x-icon" href="../favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="../favicon-32.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon-180.png">
+<link rel="manifest" href="../manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   :root {
@@ -97,8 +101,8 @@ const SECRET_KEY = 'dis_admin_secret';
 let secret = sessionStorage.getItem(SECRET_KEY) || '';
 let charts = {};
 
-const pctClass  = p => p >= 85 ? 'pct-good' : p >= 70 ? 'pct-warn' : 'pct-bad';
-const barColor  = p => p >= 85 ? '#16a34a'  : p >= 70 ? '#eab308'  : '#dc2626';
+const pctClass  = p => p >= 80 ? 'pct-good' : p >= 70 ? 'pct-warn' : 'pct-bad';
+const barColor  = p => p >= 80 ? '#16a34a'  : p >= 70 ? '#eab308'  : '#dc2626';
 const escHtml   = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const regionTag = r => r === 'Region 1'
   ? `<span class="tag-r1">Region 1</span>`
@@ -129,7 +133,10 @@ function signOut() { sessionStorage.removeItem(SECRET_KEY); secret=''; loginScre
 function shell() {
   document.getElementById('app').innerHTML = `
     <header>
-      <h1>DIS Admin Dashboard — Syphilis 2026</h1>
+      <div style="display:flex; align-items:center;">
+        <img src="../logo.png" alt="DPH Logo" style="height:32px; margin-right:10px; vertical-align:middle;">
+        <h1>DIS Admin Dashboard — Syphilis 2026</h1>
+      </div>
       <div class="hactions">
         <a class="btn" id="csvBtn" href="#">⇩ Export CSV</a>
         <button onclick="load()">↻ Refresh</button>
@@ -185,7 +192,7 @@ function shell() {
 
       <p class="muted" style="margin-top:6px;margin-bottom:32px;">
         Last loaded: <span id="loadedAt">—</span> &nbsp;·&nbsp;
-        Thresholds: ≥85% proficient &nbsp;·&nbsp; 70–84% reinforcement &nbsp;·&nbsp; &lt;70% retraining
+        Thresholds: ≥80% proficient &nbsp;·&nbsp; 70–80% reinforcement &nbsp;·&nbsp; &lt;70% retraining
       </p>
     </main>`;
 }
@@ -232,7 +239,7 @@ function renderKpis(m) {
     <div class="card kpi"><div class="label">Total submissions</div><div class="val">${k.totalSubmissions||0}</div></div>
     <div class="card kpi"><div class="label">Unique testers</div><div class="val">${k.uniqueTesters||0}</div></div>
     <div class="card kpi"><div class="label">Program avg %</div><div class="val ${pctClass(k.avgPct||0)}">${k.avgPct||0}%</div></div>
-    <div class="card kpi"><div class="label">Proficient ≥85%</div><div class="val pct-good">${k.proficientRate||0}%</div></div>
+    <div class="card kpi"><div class="label">Proficient ≥80%</div><div class="val pct-good">${k.proficientRate||0}%</div></div>
     <div class="card kpi"><div class="label">Needs reinforcement</div><div class="val pct-warn">${k.reinforcementRate||0}%</div></div>
     <div class="card kpi"><div class="label">Needs retraining</div><div class="val pct-bad">${k.retrainingRate||0}%</div></div>`;
 }
@@ -314,7 +321,7 @@ function renderRegionBandChart(m) {
     data: {
       labels,
       datasets: [
-        { label:'Proficient (≥85%)',        data:labels.map(r=>get(r,'proficient')),          backgroundColor:'#16a34a' },
+        { label:'Proficient (≥80%)',        data:labels.map(r=>get(r,'proficient')),          backgroundColor:'#16a34a' },
         { label:'Needs reinforcement (70–84%)', data:labels.map(r=>get(r,'needs_reinforcement')), backgroundColor:'#eab308' },
         { label:'Needs retraining (<70%)',   data:labels.map(r=>get(r,'needs_retraining')),    backgroundColor:'#dc2626' }
       ]
@@ -344,7 +351,7 @@ function renderBandChart(m) {
   charts.band = new Chart(document.getElementById('bandChart'), {
     type:'doughnut',
     data:{
-      labels:['Proficient (≥85%)','Needs reinforcement (70–84%)','Needs retraining (<70%)'],
+      labels:['Proficient (≥80%)','Needs reinforcement (70–80%)','Needs retraining (<70%)'],
       datasets:[{ data:[b.proficient||0,b.needs_reinforcement||0,b.needs_retraining||0],
         backgroundColor:['#16a34a','#eab308','#dc2626'] }]
     },
@@ -416,6 +423,14 @@ function renderFlagged(m) {
           <span class="muted">${(r.timestamp||'').replace('T',' ').slice(0,16)}</span>
         </summary>
         <pre class="resp">${escHtml(r.response||'(no response)')}</pre>
+        <div style="margin-top:8px;display:flex;gap:6px;align-items:center;">
+          <label style="font-size:13px;">Override earned:</label>
+          <input id="oe-${escHtml(r.token)}-${r.questionId}" type="number" min="0" style="width:60px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;" placeholder="${r.rubricMatched||0}" />
+          <label style="font-size:13px;">max:</label>
+          <input id="om-${escHtml(r.token)}-${r.questionId}" type="number" min="0" style="width:60px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;" placeholder="${r.rubricTotal||0}" />
+          <button onclick="overrideScore('${escHtml(r.token)}',${r.questionId})" style="padding:4px 10px;font-size:12px;background:var(--primary);color:#fff;border:0;border-radius:4px;cursor:pointer;">Save override</button>
+          <span id="ov-result-${r.questionId}-${escHtml(r.token).replace(/'/g,"\\'")}" style="font-size:12px;color:var(--muted);"></span>
+        </div>
       </details>`).join('')
     : '<div class="empty">No write-in responses awaiting review.</div>';
 }
@@ -442,6 +457,29 @@ async function downloadCsv() {
   const a    = Object.assign(document.createElement('a'), { href:url, download:'dis-submissions.csv' });
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
+}
+
+// ─── Score Override ─────────────────────────────────────────────────────────
+async function overrideScore(token, questionId) {
+  const earnedEl = document.getElementById('oe-' + token + '-' + questionId);
+  const maxEl = document.getElementById('om-' + token + '-' + questionId);
+  const resultEl = document.getElementById('ov-result-' + questionId + '-' + token.replace(/'/g, "\\'"));
+  if (!earnedEl) { alert('Override fields not found — try refreshing.'); return; }
+  const earned = Number(earnedEl.value);
+  const max = maxEl && maxEl.value !== '' ? Number(maxEl.value) : undefined;
+  if (isNaN(earned) || earned < 0) { alert('Enter a valid earned score.'); return; }
+  if (!confirm(`Override Q${questionId} for "${token}": earned = ${earned}${max != null ? ', max = ' + max : ''}?\n\nThe submission's total score, pct, band, and domain breakdown will be recalculated.`)) return;
+  try {
+    const r = await fetch('/.netlify/functions/override-score', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+      body: JSON.stringify({ token, questionId, earned, max })
+    });
+    const d = await r.json();
+    if (!r.ok) { alert('Override failed: ' + (d.error || 'HTTP ' + r.status)); return; }
+    if (resultEl) resultEl.textContent = '✓ Saved — new score: ' + d.earned + '/' + d.max + ' (' + d.pct + '%, ' + d.band.replace(/_/g,' ') + ')';
+    alert(`Override saved. New score for ${token}: ${d.earned}/${d.max} (${d.pct}%, ${d.band.replace(/_/g,' ')}).\n\nRefresh the dashboard to see updated analytics.`);
+  } catch (e) { alert('Override failed: ' + e.message); }
 }
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────

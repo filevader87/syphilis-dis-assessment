@@ -1,4 +1,4 @@
-const { load: loadSubmissions, append } = require('./_blobs-bridge');
+const { load: loadSubmissions, saveAll } = require('./_blobs-bridge');
 
 function checkSecret(event) {
   const required = process.env.ADMIN_SECRET;
@@ -17,7 +17,6 @@ exports.handler = async (event) => {
   if (!token) return { statusCode: 400, body: JSON.stringify({ error: 'token required' }) };
   
   const arr = await loadSubmissions();
-  const remaining = [];
   let archivedCount = 0;
   for (const r of arr) {
     if (r.token === token) {
@@ -26,19 +25,9 @@ exports.handler = async (event) => {
       r.token = token + '__archived_' + Date.now();
       archivedCount++;
     }
-    remaining.push(r);
   }
   
-  // Re-save the modified array (blobs bridge doesn't have a save-all, so we use the PUT pattern)
-  const SITE_ID = process.env.SITE_ID || '21fd2f38-d3e8-4f3e-b48b-fc98f00b0bdc';
-  const TOKEN = process.env.NETLIFY_AUTH_TOKEN || '';
-  const API = TOKEN ? 'https://api.netlify.com/api/v1/sites/' + SITE_ID + '/blobs/submissions' : '';
-  if (API) {
-    await fetch(API + '/submissions.json', {
-      method: 'PUT', headers: { Authorization: 'Bearer ' + TOKEN, 'Content-Type': 'application/octet-stream' },
-      body: JSON.stringify(remaining)
-    });
-  }
+  const storage = await saveAll(arr);
   
-  return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: true, token, archivedCount }) };
+  return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: true, token, archivedCount, storage }) };
 };

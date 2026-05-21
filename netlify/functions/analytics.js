@@ -1,6 +1,6 @@
 const { load: loadSubmissions } = require('./_blobs-bridge');
 
-const PASS_PROFICIENT = 85;
+const PASS_PROFICIENT = 80;
 const PASS_REINFORCE = 70;
 
 function bandOf(pct) {

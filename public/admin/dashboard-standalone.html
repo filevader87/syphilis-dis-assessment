@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DIS Dashboard — Standalone</title>
+<link rel="icon" type="image/x-icon" href="../favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="../favicon-32.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon-180.png">
+<link rel="manifest" href="../manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--primary:#0b5ed7;--text:#1f2937;--muted:#6b7280;--border:#e5e7eb;--good:#16a34a;--warn:#eab308;--bad:#dc2626;--r1:#6366f1;--r2:#f59e0b;}
@@ -63,7 +67,7 @@ const rTag = r => r==='Region 1'?'<span class="tag-r1">Region 1</span>':r==='Reg
 const C = {};
 
 // Build
-let html=`<header><h1>DIS Admin Dashboard — Syphilis 2026</h1><span class="muted" style="color:#fff">Standalone — ` + new Date().toLocaleString() + `</span></header><main>`;
+let html=`<header><div style="display:flex; align-items:center;"><img src="../logo.png" alt="DPH Logo" style="height:32px; margin-right:10px; vertical-align:middle;"><h1>DIS Admin Dashboard — Syphilis 2026</h1></div><span class="muted" style="color:#fff">Standalone — ` + new Date().toLocaleString() + `</span></header><main>`;
 
 // KPIs
 const pr = Math.round(D.bands.proficient/D.total*100), rr = Math.round(D.bands.reinforcement/D.total*100);
