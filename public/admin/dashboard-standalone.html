@@ -74,7 +74,7 @@ const pr = Math.round(D.bands.proficient/D.total*100), rr = Math.round(D.bands.r
 html+=`<div class="sec">Program Overview</div><div class="kpi">
   <div class="card"><div class="l">Total Submissions</div><div class="v">${D.total}</div></div>
   <div class="card"><div class="l">Program Avg %</div><div class="v ${pctCls(D.avg)}">${D.avg}%</div></div>
-  <div class="card"><div class="l">Proficient ≥85%</div><div class="v pg">${pr}%</div></div>
+  <div class="card"><div class="l">Proficient ≥80%</div><div class="v pg">${pr}%</div></div>
   <div class="card"><div class="l">Needs Reinforcement</div><div class="v pw">${rr}%</div></div>
   <div class="card"><div class="l">Needs Retraining</div><div class="v pb">${Math.round(D.bands.needs_retraining/D.total*100)}%</div></div>
 </div>`;
@@ -115,7 +115,7 @@ html+=`<div class="sec">Question Difficulty</div><div class="card"><table><thead
 D.qdiff.forEach(q=>{html+=`<tr><td>Q${q.id}</td><td>${esc(q.domain)}</td><td>${q.attempts}</td><td class="${pctCls(q.pct)}">${q.pct}%</td></tr>`});
 html+=`</tbody></table></div>`;
 
-html+=`<p class="muted" style="margin:20px 0 32px;text-align:center">Standalone View · Data: ${D.total} submissions · Thresholds: ≥85% Proficient · 70–84% Reinforcement · <70% Retraining</p></main>`;
+html+=`<p class="muted" style="margin:20px 0 32px;text-align:center">Standalone View · Data: ${D.total} submissions · Thresholds: ≥80% Proficient · 70–84% Reinforcement · <70% Retraining</p></main>`;
 document.getElementById('app').innerHTML = html;
 
 // Render charts after DOM

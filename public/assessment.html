@@ -89,7 +89,7 @@ function startManual() {
 
 async function loadQuestions() {
   try {
-    const r = await fetch('questions.json');
+    const r = await fetch('questions.json?v=' + Date.now());
     QUESTIONS = await r.json();
     render();
   } catch {

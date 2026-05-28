@@ -9,7 +9,7 @@ const path = require('path');
 // Copy of the scoring logic (mirrors netlify/functions/submit.js)
 const QUESTIONS = require('../netlify/functions/_questions.json');
 
-const PASS_PROFICIENT = 85;
+const PASS_PROFICIENT = 80;
 const PASS_REINFORCE = 70;
 
 function band(pct) {
@@ -89,137 +89,146 @@ function gradeAll(responses) {
 
 // ─── Mock Submissions ───────────────────────────────────────────────
 
-// Correct answers for reference
-// Q1:a Q2:c Q3:b Q4:c Q5:c Q6:c Q7:b Q8:a Q9:b Q10:b Q11:b Q12:b
-// Q18 correct: [a, c]
-// Write-in correct answers:
-// Q13: "Early Non-Primary Non-Secondary, based on patient-described primary sign (chancre) within 12 months"
-// Q15: "Early Non-Primary Non-Secondary, based on epidemiologic linkage to a documented partner with syphilis"
-// Q17: "Unknown Duration with Ocular Syphilis Likely (probable) — no direct detection on ocular fluid"
-// Q19: "No, not available. The concurrent nonreactive treponemal disqualifies Probable Path B"
-
+// Correct answers for the current 25-question bank.
 const CORRECT = {
-  mc:  {1:'a', 2:'c', 3:'b', 4:'c', 5:'c', 6:'c', 7:'b', 8:'a', 9:'b', 10:'b', 11:'b', 12:'b', 14:'a', 16:'b', 20:'b'},
-  ms:  {18: ['a', 'c']},
+  mc:  {1:'a', 2:'c', 3:'b', 4:'c', 5:'c', 9:'b', 12:'a', 14:'d', 16:'c', 17:'b', 18:'b', 19:'b', 23:'b', 24:'a', 25:'b'},
+  ms:  {6: ['b', 'c', 'e'], 22: ['a', 'b', 'd', 'f']},
   write: {
-    13: "Stage: Early Non-Primary Non-Secondary. Evidence: specific patient-described primary sign/chancre within the previous 12 months.",
-    15: "Stage: Early Non-Primary Non-Secondary. Criterion: epidemiologic linkage to a partner independently documented with syphilis during the previous 12 months.",
-    17: "Base stage: Syphilis, Unknown Duration. Sub-classification: Ocular Syphilis, Likely (probable) — no direct-detection testing on ocular fluid.",
-    19: "No, Secondary Probable Path B is not available because a returned nonreactive treponemal test disqualifies Path B; Path B requires no concurrent nonreactive treponemal result."
+    7:  "Secondary Path B clinical criteria palmar plantar mucous reactive nontreponemal treponemal absent",
+    8:  "No disqualified nonreactive treponemal concurrent nonreactive",
+    10: "Unknown Duration probable path a outside 12 months no acquisition evidence",
+    11: "Early non-primary non-secondary patient-described prior chancre primary symptom",
+    13: "Early non-primary non-secondary epidemiologic linkage documented partner",
+    15: "Unknown Duration probable path a not documented mere sexual contact no qualifying evidence",
+    // Q19 is multiple choice in the current bank; this text is retained only as a reference for the requested rubric language.
+    19: "No not probable adequate treatment three dose titer declined fourfold 1:1 not fourfold higher",
+    20: "No not probable adequate treatment three dose titer declined fourfold",
+    21: "Unknown Duration ocular likely no direct detection no ocular fluid"
   }
 };
 
-function mcAll(correct) {
+function wrongMC(id, correctKey) {
+  // Specific distractors for the current MC question numbers.
+  const dist = {1:'b', 2:'a', 3:'a', 4:'a', 5:'a', 9:'a', 12:'b', 14:'a', 16:'a', 17:'a', 18:'a', 19:'a', 23:'a', 24:'b', 25:'a'};
+  return dist[id] || (correctKey === 'a' ? 'b' : 'a');
+}
+
+function correctResponses() {
   const out = {};
-  for (const [id, key] of Object.entries(CORRECT.mc)) out[id] = correct ? key : wrongMC(id, key);
+  for (const q of QUESTIONS) {
+    if (q.type === 'mc') out[q.id] = CORRECT.mc[q.id];
+    else if (q.type === 'ms') out[q.id] = [...CORRECT.ms[q.id]];
+    else if (q.type === 'write') out[q.id] = CORRECT.write[q.id];
+  }
   return out;
 }
 
-function wrongMC(id, correctKey) {
-  // Return a specific distracter for variety
-  const dist = {1:'c', 2:'a', 3:'d', 4:'a', 5:'d', 6:'a', 7:'a', 8:'d', 9:'d', 10:'a', 11:'a', 12:'c', 14:'d', 16:'c', 20:'a'};
-  return dist[id] || 'b';
+function wrongResponses() {
+  const out = {};
+  for (const q of QUESTIONS) {
+    if (q.type === 'mc') out[q.id] = wrongMC(q.id, CORRECT.mc[q.id]);
+    else if (q.type === 'ms') out[q.id] = q.id === 6 ? ['a'] : ['c'];
+    else if (q.type === 'write') out[q.id] = '';
+  }
+  return out;
+}
+
+function withMisses({ wrongMc = [], wrongMs = [], partialWrite = [], wrongWrite = [] } = {}) {
+  const out = correctResponses();
+  for (const id of wrongMc) out[id] = wrongMC(id, CORRECT.mc[id]);
+  for (const id of wrongMs) out[id] = id === 6 ? ['a'] : ['c'];
+  for (const id of partialWrite) out[id] = partialWriteText(id);
+  for (const id of wrongWrite) out[id] = '';
+  return out;
+}
+
+function partialWriteText(id) {
+  const partial = {
+    7:  'Secondary Path B',
+    8:  'No',
+    10: 'Unknown Duration',
+    11: 'Early non-primary non-secondary',
+    13: 'Early non-primary non-secondary',
+    15: 'Unknown Duration',
+    20: 'No not probable',
+    21: 'Unknown Duration ocular likely'
+  };
+  return partial[id] || 'partial';
 }
 
 const MOCKS = [
-  // 1. PERFECT — 26/26 (100%)
-  { name: 'Perfect Score', token: 'mock-perfect', region: 'Region A', responses: {
-    ...mcAll(true),
-    18: ['a','c'],
-    13: CORRECT.write[13],
-    15: CORRECT.write[15],
-    17: CORRECT.write[17],
-    19: CORRECT.write[19]
-  }},
+  // 1. PERFECT — 34/34 (100%)
+  { name: 'Perfect Score', token: 'mock-perfect', region: 'Region 1', responses: correctResponses() },
 
-  // 2. STRONG PROFICIENT — 24/26 (92%) — miss Q12 (staging) + Q20
-  { name: 'Strong Proficient', token: 'mock-strong', region: 'Region B', responses: {
-    ...mcAll(true), 12:'a', 20:'d',
-    18: ['a','c'],
-    13: CORRECT.write[13],
-    15: CORRECT.write[15],
-    17: CORRECT.write[17],
-    19: CORRECT.write[19]
-  }},
+  // 2. STRONG PROFICIENT — 31/34 (91%)
+  { name: 'Strong Proficient', token: 'mock-strong', region: 'Region 2', responses: withMisses({
+    wrongMc: [24],
+    partialWrite: [15, 20]
+  })},
 
-  // 3. BORDERLINE PROFICIENT — 22/26 (85%) — miss Q4, Q6, Q20, half Q17
-  { name: 'Borderline Proficient', token: 'mock-borderline', region: 'Region A', responses: {
-    ...mcAll(true), 4:'d', 6:'d', 20:'d',
-    18: ['a','c'],
-    13: CORRECT.write[13],
-    15: CORRECT.write[15],
-    17: "The base stage is Unknown Duration. Sub-classification: Ocular Syphilis.",  // only matches group 1+2, misses "likely/probable" → 1/3 pts
-    19: CORRECT.write[19]
-  }},
+  // 3. BORDERLINE PROFICIENT — 27/34 (79%)
+  { name: 'Borderline Proficient', token: 'mock-borderline', region: 'Region 1', responses: withMisses({
+    wrongMc: [4, 12, 18],
+    wrongMs: [6],
+    partialWrite: [8, 21]
+  })},
 
-  // 4. HIGH REINFORCEMENT — 19/26 (73%) — miss Q3, Q8, Q12, Q16, half Q15
-  { name: 'High Reinforcement', token: 'mock-high-rein', region: 'Region C', responses: {
-    ...mcAll(true), 3:'a', 8:'c', 12:'c', 16:'c',
-    18: ['a','c'],
-    13: CORRECT.write[13],
-    15: "Early NPNS stage. Based on partner exposure.",  // matches group 1, misses group 2 (no "epi linkage"/"documented partner") → 1/2 pts
-    17: CORRECT.write[17],
-    19: CORRECT.write[19]
-  }},
+  // 4. HIGH REINFORCEMENT — 25/34 (74%)
+  { name: 'High Reinforcement', token: 'mock-high-rein', region: 'Region 2', responses: withMisses({
+    wrongMc: [3, 5, 16, 23],
+    wrongMs: [6],
+    partialWrite: [13, 20],
+    wrongWrite: [10]
+  })},
 
-  // 5. MID REINFORCEMENT — 17/26 (65%) — miss Q1, Q4, Q9, Q16, partial Q18, fail Q19
-  { name: 'Mid Reinforcement', token: 'mock-mid-rein', region: 'Region A', responses: {
-    ...mcAll(true), 1:'b', 4:'d', 9:'a', 16:'c',
-    18: ['a'],  // partial credit (1/2)
-    13: CORRECT.write[13],
-    15: CORRECT.write[15],
-    17: CORRECT.write[17],
-    19: "yes"  // totally wrong → 0/2
-  }},
+  // 5. MID REINFORCEMENT — 22/34 (65%)
+  { name: 'Mid Reinforcement', token: 'mock-mid-rein', region: 'Region 1', responses: withMisses({
+    wrongMc: [1, 4, 9, 16, 19],
+    wrongMs: [6, 22],
+    partialWrite: [15, 21],
+    wrongWrite: [8]
+  })},
 
-  // 6. LOW REINFORCEMENT — 18/26 (69%) — miss Q2, Q5, Q11, Q16, Q14, fail Q19
-  { name: 'Low Reinforcement', token: 'mock-low-rein', region: 'Region D', responses: {
-    ...mcAll(true), 2:'d', 5:'a', 11:'c', 14:'d', 16:'d',
-    18: ['a','c'],
-    13: CORRECT.write[13],
-    15: CORRECT.write[15],
-    17: CORRECT.write[17],
-    19: "no."  // matches group 1 but not group 2 (no "treponemal" keyword) → 1/2 pts
-  }},
+  // 6. LOW REINFORCEMENT — 24/34 (71%)
+  { name: 'Low Reinforcement', token: 'mock-low-rein', region: 'Region 2', responses: withMisses({
+    wrongMc: [2, 5, 14, 17],
+    wrongMs: [6],
+    partialWrite: [20, 21],
+    wrongWrite: [7]
+  })},
 
-  // 7. HIGH RETRAINING — 15/26 (58%) — miss Q1, Q3, Q6, Q7, Q12, Q16, Q20 + partial Q18
-  { name: 'Just Below 70', token: 'mock-high-retrain', region: 'Region B', responses: {
-    ...mcAll(true), 1:'d', 3:'a', 6:'d', 7:'c', 12:'d', 16:'d', 20:'a',
-    18: ['a'],  // partial (1/2)
-    13: CORRECT.write[13],
-    15: CORRECT.write[15],
-    17: CORRECT.write[17],
-    19: CORRECT.write[19]
-  }},
+  // 7. HIGH RETRAINING — 20/34 (59%)
+  { name: 'High Retraining', token: 'mock-high-retrain', region: 'Region 1', responses: withMisses({
+    wrongMc: [1, 3, 12, 16, 23, 25],
+    wrongMs: [6, 22],
+    partialWrite: [21],
+    wrongWrite: [7, 13]
+  })},
 
-  // 8. MID RETRAINING — 14/26 (54%)
-  { name: 'Mid Retraining', token: 'mock-mid-retrain', region: 'Region E', responses: {
-    ...mcAll(true), 2:'b', 4:'d', 5:'b', 8:'d', 9:'d', 11:'a', 14:'d', 16:'a', 20:'a',
-    18: ['c'],  // wrong pick
-    13: "Primary Syphilis",  // wrong both groups — 0 pts
-    15: "Unknown duration",  // wrong both groups — 0 pts
-    17: "Unknown Duration. Ocular. probably.",  // gets all 3 groups — full 3 pts
-    19: CORRECT.write[19]
-  }},
+  // 8. MID RETRAINING — 18/34 (53%)
+  { name: 'Mid Retraining', token: 'mock-mid-retrain', region: 'Region 2', responses: withMisses({
+    wrongMc: [2, 4, 5, 9, 14, 17, 18, 24],
+    wrongMs: [6, 22],
+    wrongWrite: [7, 8, 10]
+  })},
 
-  // 9. LOW RETRAINING — 10/26 (38%)
-  { name: 'Low Retraining', token: 'mock-low-retrain', region: 'Region C', responses: {
-    ...mcAll(true), 1:'c', 4:'a', 6:'d', 7:'d', 8:'b', 9:'c', 10:'d', 11:'b', 12:'d', 14:'b', 16:'a', 20:'d',
-    18: ['b'],  // all wrong
-    13: "idk",  // 0
-    15: "unknown",  // 0
-    17: "ocular likely",  // matches groups 2+3 but not 1 — partial 1pt
-    19: "yes"  // 0
-  }},
+  // 9. LOW RETRAINING — 13/34 (38%)
+  { name: 'Low Retraining', token: 'mock-low-retrain', region: 'Region 1', responses: withMisses({
+    wrongMc: [1, 3, 4, 9, 12, 14, 16, 23, 25],
+    wrongMs: [6, 22],
+    wrongWrite: [7, 8, 10, 11, 13]
+  })},
 
-  // 10. VERY LOW — 5/26 (19%)
-  { name: 'Near Total Failure', token: 'mock-fail', region: 'Region D', responses: {
-    ...mcAll(true), 2:'a', 3:'d', 5:'b', 6:'b', 7:'c', 8:'c', 9:'a', 10:'c', 11:'d', 12:'a', 14:'c', 16:'d', 20:'c',
-    18: ['b','d'],  // wrong picks
-    13: "",  // 0
-    15: "",  // 0
-    17: "",  // 0
-    19: ""   // 0
+  // 10. VERY LOW — 7/34 (21%)
+  { name: 'Very Low', token: 'mock-fail', region: 'Region 2', responses: {
+    ...wrongResponses(),
+    1: CORRECT.mc[1],
+    2: CORRECT.mc[2],
+    3: CORRECT.mc[3],
+    4: CORRECT.mc[4],
+    5: CORRECT.mc[5],
+    9: CORRECT.mc[9],
+    12: CORRECT.mc[12]
   }}
 ];
 
@@ -230,9 +239,9 @@ fs.mkdirSync(path.dirname(submissionsPath), { recursive: true });
 
 const records = [];
 
-console.log('╔══════════════════════════════════════════════════════════════╗');
-console.log('║        DIS ASSESSMENT — 10 MOCK SUBMISSIONS                 ║');
-console.log('╠══════════════════════════════════════════════════════════════╣');
+console.log('╔════════════════════════════════════════════════════════════════════╗');
+console.log('║        DIS ASSESSMENT — 10 MOCK SUBMISSIONS                       ║');
+console.log('╠════════════════════════════════════════════════════════════════════╣');
 
 for (const mock of MOCKS) {
   const graded = gradeAll(mock.responses);
@@ -252,10 +261,11 @@ for (const mock of MOCKS) {
 
   const bar = '█'.repeat(Math.floor(graded.pct / 5)) + '░'.repeat(20 - Math.floor(graded.pct / 5));
   const bandLabel = { proficient: '✅ PROFICIENT', needs_reinforcement: '⚠️  REINFORCE', needs_retraining: '❌ RETRAINING' }[graded.band];
-  console.log(`║ ${mock.token.padEnd(20)} ${bar} ${String(graded.pct+'%').padStart(4)} ${bandLabel.padEnd(22)} ║`);
+  const score = `${graded.earned}/${graded.max}`;
+  console.log(`║ ${mock.token.padEnd(20)} ${bar} ${score.padStart(5)} ${String(graded.pct+'%').padStart(4)} ${bandLabel.padEnd(22)} ║`);
 }
 
-console.log('╚══════════════════════════════════════════════════════════════╝');
+console.log('╚════════════════════════════════════════════════════════════════════╝');
 
 fs.writeFileSync(submissionsPath, JSON.stringify(records, null, 2));
 
@@ -279,7 +289,6 @@ console.log(`   Regions: ${Object.entries(regions).map(([k,v]) => `${k}(${v})`).
 console.log(`\n🔍 Write-in responses flagged for review:`);
 for (const r of records) {
   if (r.flagged.length) {
-    const writeInItems = r.items.filter(i => r.flagged.includes(i.id));
-    console.log(`   ${r.token} (${r.pct}%): Q${r.flagged.join(', Q')}`);
+    console.log(`   ${r.token} (${r.earned}/${r.max}, ${r.pct}%): Q${r.flagged.join(', Q')}`);
   }
 }

@@ -13,8 +13,11 @@ exports.handler = async (event) => {
   if (!auth.ok) return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
   let body;
   try { body = JSON.parse(event.body || '{}'); } catch { return { statusCode: 400, body: 'Invalid JSON' }; }
-  const token = (body.token || '').trim();
-  if (!token) return { statusCode: 400, body: JSON.stringify({ error: 'token required' }) };
+  const rawToken = body.token || '';
+  if (!rawToken) return { statusCode: 400, body: JSON.stringify({ error: 'token required' }) };
+  const token = rawToken.trim();
+  if (!token) return { statusCode: 400, body: JSON.stringify({ error: 'token cannot be empty' }) };
+  if (token.includes('__archived_')) return { statusCode: 400, body: JSON.stringify({ error: 'token cannot contain __archived_' }) };
   
   const arr = await loadSubmissions();
   let archivedCount = 0;

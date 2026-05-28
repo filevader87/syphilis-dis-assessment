@@ -5,6 +5,7 @@
 const assert = require('assert');
 const { gradeAll, scoreOne } = require('./netlify/functions/submit.js');
 const { build, bandOf }      = require('./netlify/functions/analytics.js');
+const QUESTIONS              = require('./netlify/functions/_questions.json');
 
 let passed = 0, failed = 0;
 function test(name, fn) {
@@ -15,32 +16,38 @@ function section(label) { console.log(`\n${label}`); }
 
 // ─── Answer keys ────────────────────────────────────────────────────────────
 const PERFECT = {
-  1:'a', 2:'c', 3:'b', 4:'c', 5:'c', 6:'c', 7:'b', 8:'a', 9:'b', 10:'b',
-  11:'b', 12:'b',
-  13:'Stage: Early NPNS. Specific patient-described chancre within 12 months.',
-  14:'a',
-  15:'Early NPNS via epidemiologic linkage to a documented partner with secondary syphilis.',
-  16:'b',
-  17:'Unknown Duration with Ocular sub-classification, Likely.',
-  18:['a','c'],
-  19:'No. The nonreactive treponemal disqualifies Path B.',
-  20:'b'
+  1:'a', 2:'c', 3:'b', 4:'c', 5:'c',
+  6:['b','c','e'],  // ms
+  7:'Secondary Path B clinical criteria palmar plantar mucous reactive nontreponemal 1:64 treponemal absent',
+  8:'No not available disqualified nonreactive treponemal concurrent nonreactive',
+  9:'b',
+  10:'Unknown Duration probable path a 755 outside 12 months no acquisition evidence',
+  11:'Early non-primary non-secondary NPNS 730 patient-described prior chancre painless ulcer primary symptom',
+  12:'a',
+  13:'Early non-primary non-secondary NPNS 730 epidemiologic linkage documented partner',
+  14:'d',
+  15:'Unknown Duration probable path a 755 not documented mere sexual contact no qualifying acquisition',
+  16:'c', 17:'b', 18:'b', 19:'b',
+  20:'No not probable adequate treatment three dose appropriate serologic fourfold 1:1 not fourfold higher',
+  21:'Unknown Duration 755 ocular occular likely probable no direct detection no ocular fluid no aqueous',
+  22:['a','b','d','f'],  // ms with partialCredit
+  23:'b', 24:'a', 25:'b'
 };
-const ALL_WRONG  = Object.fromEntries(Object.keys(PERFECT).map(k => [k, k==18?[]:'z']));
+const ALL_WRONG  = Object.fromEntries(QUESTIONS.map(q => [q.id, q.type === 'ms' ? [] : 'z']));
 const EMPTY      = {};
 
 // ═══ SCORING ════════════════════════════════════════════════════════════════
 section('Scoring — gradeAll');
 
-test('Perfect answer key scores 26/26 = 100% proficient', () => {
+test('Perfect answer key scores 34/34 = 100% proficient', () => {
   const r = gradeAll(PERFECT);
-  assert.strictEqual(r.earned, 26);
-  assert.strictEqual(r.max, 26);
+  assert.strictEqual(r.earned, 34);
+  assert.strictEqual(r.max, 34);
   assert.strictEqual(r.pct, 100);
   assert.strictEqual(r.band, 'proficient');
 });
 
-test('All wrong scores 0/26 = 0% needs_retraining', () => {
+test('All wrong scores 0/34 = 0% needs_retraining', () => {
   const r = gradeAll(ALL_WRONG);
   assert.strictEqual(r.earned, 0);
   assert.strictEqual(r.pct, 0);
@@ -50,12 +57,12 @@ test('All wrong scores 0/26 = 0% needs_retraining', () => {
 test('Empty responses do not crash, score 0', () => {
   const r = gradeAll(EMPTY);
   assert.strictEqual(r.earned, 0);
-  assert.strictEqual(r.max, 26);
+  assert.strictEqual(r.max, 34);
 });
 
 test('Write-in items are flagged for supervisor review', () => {
   const r = gradeAll(PERFECT);
-  assert.deepStrictEqual(r.flagged.sort((a,b)=>a-b), [13, 15, 17, 19]);
+  assert.deepStrictEqual(r.flagged.sort((a,b)=>a-b), [7, 8, 10, 11, 13, 15, 20, 21]);
 });
 
 test('Domain totals sum back to overall earned/max', () => {
@@ -66,37 +73,37 @@ test('Domain totals sum back to overall earned/max', () => {
   assert.strictEqual(sumM, r.max);
 });
 
-section('Scoring — multi-select Q18');
+section('Scoring — multi-select Q22');
 
-const Q18 = require('./netlify/functions/_questions.json').find(q => q.id === 18);
+const Q22 = QUESTIONS.find(q => q.id === 22);
 
-test('Both correct, no wrong picks → full 2 points', () => {
-  const r = scoreOne(Q18, ['a','c']);
-  assert.strictEqual(r.earned, 2); assert.strictEqual(r.correct, true);
+test('All correct, no wrong picks → full 1 point', () => {
+  const r = scoreOne(Q22, ['a','b','d','f']);
+  assert.strictEqual(r.earned, 1); assert.strictEqual(r.correct, true);
 });
-test('Only one correct (no wrong) → partial 1 point', () => {
-  const r = scoreOne(Q18, ['a']);
+test('Some correct (no wrong) → partial 1 point', () => {
+  const r = scoreOne(Q22, ['a','b']);
   assert.strictEqual(r.earned, 1); assert.strictEqual(r.correct, false);
 });
 test('One correct + one wrong → 0 points', () => {
-  const r = scoreOne(Q18, ['a','b']);
+  const r = scoreOne(Q22, ['a','c']);
   assert.strictEqual(r.earned, 0);
 });
 test('All wrong → 0 points', () => {
-  const r = scoreOne(Q18, ['b','d']);
+  const r = scoreOne(Q22, ['c','e']);
   assert.strictEqual(r.earned, 0);
 });
 
 section('Scoring — write-in rubric');
 
-const Q13 = require('./netlify/functions/_questions.json').find(q => q.id === 13);
+const Q13 = QUESTIONS.find(q => q.id === 13);
 
 test('All rubric groups matched → full points', () => {
-  const r = scoreOne(Q13, 'Early NPNS based on patient-described chancre.');
+  const r = scoreOne(Q13, 'Early NPNS with epidemiologic linkage to a documented partner.');
   assert.strictEqual(r.earned, 2);
 });
 test('Some rubric groups matched → half points', () => {
-  const r = scoreOne(Q13, 'Early NPNS — uncertain why.');  // missing primary-symptom group
+  const r = scoreOne(Q13, 'Early NPNS — uncertain why.');  // missing epidemiologic-linkage group
   assert.strictEqual(r.earned, 1);
 });
 test('No rubric matches → 0 points', () => {
@@ -111,8 +118,8 @@ test('Empty write-in → 0 points', () => {
 section('Band thresholds');
 
 test('100% → proficient',    () => assert.strictEqual(bandOf(100), 'proficient'));
-test('85% → proficient',     () => assert.strictEqual(bandOf(85),  'proficient'));
-test('84% → reinforcement',  () => assert.strictEqual(bandOf(84),  'needs_reinforcement'));
+test('80% → proficient',     () => assert.strictEqual(bandOf(80),  'proficient'));
+test('79% → reinforcement',  () => assert.strictEqual(bandOf(79),  'needs_reinforcement'));
 test('70% → reinforcement',  () => assert.strictEqual(bandOf(70),  'needs_reinforcement'));
 test('69% → retraining',     () => assert.strictEqual(bandOf(69),  'needs_retraining'));
 test('0% → retraining',      () => assert.strictEqual(bandOf(0),   'needs_retraining'));
