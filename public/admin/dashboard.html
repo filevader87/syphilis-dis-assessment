@@ -86,6 +86,28 @@
   summary { cursor:pointer; color:var(--primary); font-size:13px; }
   pre.resp { background:#f9fafb; border:1px solid var(--border); padding:8px; border-radius:6px; white-space:pre-wrap; font-size:12px; margin:5px 0 0; }
 
+  /* Tester review cards */
+  .review-card { border:1px solid var(--border); border-radius:8px; margin-bottom:8px; overflow:hidden; transition:box-shadow .15s; }
+  .review-card:hover { box-shadow:0 2px 8px rgba(0,0,0,.08); }
+  .review-card-header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; cursor:pointer; user-select:none; background:var(--card); gap:8px; }
+  .review-card-header:hover { background:#f0f4ff; }
+  .review-card-header .token { font-weight:600; font-size:14px; color:var(--text); }
+  .review-card-header .meta { display:flex; align-items:center; gap:6px; }
+  .review-badge { display:inline-flex; align-items:center; justify-content:center; min-width:22px; height:22px; padding:0 6px; border-radius:999px; font-size:11px; font-weight:700; }
+  .review-badge.pending { background:#fef3c7; color:#92400e; }
+  .review-badge.done { background:#dcfce7; color:#166534; }
+  .review-card-body { max-height:0; overflow:hidden; transition:max-height .3s ease; }
+  .review-card.open .review-card-body { max-height:2000px; }
+  .review-item { padding:10px 14px; border-top:1px solid var(--border); background:#fafbfc; }
+  .review-item .q-label { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.03em; margin-bottom:4px; }
+  .review-item .response-text { background:#fff; border:1px solid var(--border); padding:8px 10px; border-radius:6px; font-size:13px; line-height:1.5; margin:6px 0; white-space:pre-wrap; }
+  .review-item .rubric-info { font-size:12px; color:var(--muted); margin-bottom:8px; }
+  .override-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .override-row label { font-size:12px; color:var(--muted); }
+  .override-row input { width:56px; padding:4px 6px; border:1px solid var(--border); border-radius:4px; font-size:13px; }
+  .override-row button { padding:4px 12px; font-size:12px; background:var(--primary); color:#fff; border:0; border-radius:4px; cursor:pointer; }
+  .override-row .result { font-size:12px; color:var(--good); }
+
   /* Login */
   .login-wrap { max-width:400px; margin:80px auto; }
   .login-wrap input { width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; font-size:15px; margin-top:6px; }
@@ -412,27 +434,62 @@ function renderQuestionDifficulty(m) {
     : '<tr><td colspan="4" class="empty">No data yet.</td></tr>';
 }
 
-// ─── Flagged write-ins ────────────────────────────────────────────────────────
+// ─── Flagged write-ins (grouped by tester) ─────────────────────────────────────
 function renderFlagged(m) {
   const f = m.flaggedReviews || [];
-  document.getElementById('flagged').innerHTML = f.length
-    ? f.map(r => `<details>
-        <summary>
-          <strong>Q${r.questionId}</strong> · ${escHtml(r.token)} · ${regionTag(r.region)} ·
-          ${escHtml(r.domain)} · rubric ${r.rubricMatched||0}/${r.rubricTotal||0} ·
-          <span class="muted">${(r.timestamp||'').replace('T',' ').slice(0,16)}</span>
-        </summary>
-        <pre class="resp">${escHtml(r.response||'(no response)')}</pre>
-        <div style="margin-top:8px;display:flex;gap:6px;align-items:center;">
-          <label style="font-size:13px;">Override earned:</label>
-          <input id="oe-${escHtml(r.token)}-${r.questionId}" type="number" min="0" style="width:60px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;" placeholder="${r.rubricMatched||0}" />
-          <label style="font-size:13px;">max:</label>
-          <input id="om-${escHtml(r.token)}-${r.questionId}" type="number" min="0" style="width:60px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;" placeholder="${r.rubricTotal||0}" />
-          <button onclick="overrideScore('${escHtml(r.token)}',${r.questionId})" style="padding:4px 10px;font-size:12px;background:var(--primary);color:#fff;border:0;border-radius:4px;cursor:pointer;">Save override</button>
-          <span id="ov-result-${r.questionId}-${escHtml(r.token).replace(/'/g,"\\'")}" style="font-size:12px;color:var(--muted);"></span>
+  if (!f.length) {
+    document.getElementById('flagged').innerHTML = '<div class="empty">No write-in responses awaiting review.</div>';
+    return;
+  }
+  // Group by token
+  const groups = {};
+  f.forEach(r => {
+    const key = r.token || 'Unknown';
+    if (!groups[key]) groups[key] = { token: key, region: r.region, items: [] };
+    groups[key].items.push(r);
+  });
+  // Sort: testers with more pending items first
+  const sorted = Object.values(groups).sort((a, b) => b.items.length - a.items.length);
+
+  document.getElementById('flagged').innerHTML = sorted.map(g => {
+    const cardId = 'rc-' + escHtml(g.token).replace(/\s+/g, '-');
+    const flagged = g.items.length;
+    return `
+      <div class="review-card" id="${cardId}">
+        <div class="review-card-header" onclick="toggleReviewCard('${cardId}')">
+          <div>
+            <span class="token">${escHtml(g.token)}</span>
+            <span style="margin-left:6px;">${regionTag(g.region)}</span>
+          </div>
+          <div class="meta">
+            <span class="review-badge pending">${flagged} ${flagged === 1 ? 'review' : 'reviews'}</span>
+            <span style="font-size:12px;color:var(--muted);">▼</span>
+          </div>
         </div>
-      </details>`).join('')
-    : '<div class="empty">No write-in responses awaiting review.</div>';
+        <div class="review-card-body">
+          ${g.items.map(r => `
+            <div class="review-item">
+              <div class="q-label">Q${r.questionId} · ${escHtml(r.domain)}</div>
+              <div class="rubric-info">Rubric keywords matched: ${r.rubricMatched || 0}/${r.rubricTotal || 0} · <span class="muted">${(r.timestamp || '').replace('T', ' ').slice(0, 16)}</span></div>
+              <div class="response-text">${escHtml(r.response || '(no response)')}</div>
+              <div class="override-row">
+                <label>Earned:</label>
+                <input id="oe-${escHtml(r.token)}-${r.questionId}" type="number" min="0" placeholder="${r.rubricMatched || 0}" />
+                <label>Max:</label>
+                <input id="om-${escHtml(r.token)}-${r.questionId}" type="number" min="0" placeholder="${r.rubricTotal || 0}" />
+                <button onclick="overrideScore('${escHtml(r.token)}',${r.questionId},'${cardId}')">Save override</button>
+                <span id="ov-result-${r.questionId}-${escHtml(r.token).replace(/'/g,"\\'")}" class="result"></span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function toggleReviewCard(cardId) {
+  const el = document.getElementById(cardId);
+  if (el) el.classList.toggle('open');
 }
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
@@ -460,7 +517,7 @@ async function downloadCsv() {
 }
 
 // ─── Score Override ─────────────────────────────────────────────────────────
-async function overrideScore(token, questionId) {
+async function overrideScore(token, questionId, cardId) {
   const earnedEl = document.getElementById('oe-' + token + '-' + questionId);
   const maxEl = document.getElementById('om-' + token + '-' + questionId);
   const resultEl = document.getElementById('ov-result-' + questionId + '-' + token.replace(/'/g, "\\'"));
@@ -477,8 +534,30 @@ async function overrideScore(token, questionId) {
     });
     const d = await r.json();
     if (!r.ok) { alert('Override failed: ' + (d.error || 'HTTP ' + r.status)); return; }
-    if (resultEl) resultEl.textContent = '✓ Saved — new score: ' + d.earned + '/' + d.max + ' (' + d.pct + '%, ' + d.band.replace(/_/g,' ') + ')';
-    alert(`Override saved. New score for ${token}: ${d.earned}/${d.max} (${d.pct}%, ${d.band.replace(/_/g,' ')}).\n\nRefresh the dashboard to see updated analytics.`);
+    if (resultEl) resultEl.textContent = '✓ Saved — ' + d.earned + '/' + d.max + ' (' + d.pct + '%, ' + d.band.replace(/_/g,' ') + ')';
+    // Hide the overridden review item
+    const item = earnedEl.closest('.review-item');
+    if (item) {
+      item.style.opacity = '0.5';
+      item.querySelector('button').disabled = true;
+      item.querySelector('button').textContent = 'Saved';
+    }
+    // Update badge count on the card
+    if (cardId) {
+      const card = document.getElementById(cardId);
+      if (card) {
+        const badge = card.querySelector('.review-badge');
+        if (badge) {
+          let count = parseInt(badge.textContent) - 1;
+          if (count <= 0) {
+            badge.textContent = '✓ Done';
+            badge.className = 'review-badge done';
+          } else {
+            badge.textContent = count + (count === 1 ? ' review' : ' reviews');
+          }
+        }
+      }
+    }
   } catch (e) { alert('Override failed: ' + e.message); }
 }
 
