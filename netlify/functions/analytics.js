@@ -1,4 +1,13 @@
 const { load: loadSubmissions } = require('./_blobs-bridge');
+const questions = require('./_questions.json');
+const DISPLAY_DOMAINS = {};
+const WRITE_IDS = new Set();
+for (const q of questions) {
+  DISPLAY_DOMAINS[q.id] = q.displayDomain || q.domain;
+  if (q.type === 'write') WRITE_IDS.add(q.id);
+}
+// IDs beyond the question bank are "unknown" — mark with displayDomain from submission or '?'
+const CURRENT_MAX_ID = Math.max(...questions.map(q => q.id));
 
 const PASS_PROFICIENT = 80;
 const PASS_REINFORCE = 70;
@@ -69,12 +78,12 @@ function build(subs) {
 
     for (const item of (s.items || [])) {
       const k = item.id;
-      if (!out.questionDifficulty[k]) out.questionDifficulty[k] = { id: k, domain: item.domain, attempts: 0, correct: 0, earned: 0, max: 0 };
+      if (!out.questionDifficulty[k]) out.questionDifficulty[k] = { id: k, domain: item.domain, displayDomain: DISPLAY_DOMAINS[k] || item.domain, attempts: 0, correct: 0, earned: 0, max: 0 };
       const q = out.questionDifficulty[k];
       q.attempts++; if (item.correct) q.correct++;
       q.earned += item.earned || 0; q.max += item.max || 0;
-      if (item.flagForReview && !item.correct) {
-        out.flaggedReviews.push({ token: s.token, region: s.region || 'Unassigned', timestamp: s.timestamp, questionId: k, domain: item.domain, response: item.response, rubricMatched: item.rubricMatched, rubricTotal: item.rubricTotal });
+      if (item.flagForReview) {
+        out.flaggedReviews.push({ token: s.token, region: s.region || 'Unassigned', timestamp: s.timestamp, questionId: k, domain: item.domain, displayDomain: DISPLAY_DOMAINS[k] || item.domain, response: item.response, rubricMatched: item.rubricMatched, rubricTotal: item.rubricTotal });
       }
     }
   }
