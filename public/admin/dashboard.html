@@ -160,6 +160,7 @@ const SECRET_KEY = 'dis_admin_secret';
 let secret = sessionStorage.getItem(SECRET_KEY) || '';
 let charts = {};
 let submissionsCache = null; // cached raw submissions for detail views
+let questionsCache = null; // cached question bank for answer display
 
 const pctClass  = p => p >= 80 ? 'pct-good' : p >= 70 ? 'pct-warn' : 'pct-bad';
 const barColor  = p => p >= 80 ? '#16a34a'  : p >= 70 ? '#eab308'  : '#dc2626';
@@ -288,6 +289,13 @@ async function load() {
     if (sr.ok) { const sd = await sr.json(); submissionsCache = sd.submissions || []; }
     else submissionsCache = [];
   } catch { submissionsCache = []; }
+
+  // Fetch question bank for MC/MS answer display in detail modal
+  try {
+    const qr = await fetch('/questions.json');
+    if (qr.ok) questionsCache = await qr.json();
+    else questionsCache = null;
+  } catch { questionsCache = null; }
 
   document.getElementById('csvBtn').addEventListener('click', e => { e.preventDefault(); downloadCsv(); });
   document.getElementById('loadedAt').textContent = new Date().toLocaleString();
@@ -734,10 +742,38 @@ async function showTesterDetail(token) {
       <div class="detail-item-body">`;
 
     if (item.type === 'mc') {
-      html += `<div class="label">Answer</div><div class="value"><code>${escHtml(String(item.answer||'—').toUpperCase())}</code> ${item.correct ? '— Correct' : '— Incorrect'}</div>`;
+      const qDef = questionsCache ? questionsCache.find(q => q.id === item.id) : null;
+      const optMap = {};
+      if (qDef && qDef.options) qDef.options.forEach(o => optMap[o.key] = o.text);
+      const ansText = optMap[item.answer] || item.answer;
+      const correctAns = qDef ? qDef.correct : null;
+      const correctText = correctAns ? (optMap[correctAns] || correctAns) : null;
+      html += `<div class="label">Answer</div><div class="value"><code>${escHtml(String(item.answer||'—').toUpperCase())}</code> ${escHtml(ansText !== item.answer ? '— ' + ansText : '')} ${item.correct ? '✅ Correct' : '❌ Incorrect'}</div>`;
+      if (!item.correct && correctText) {
+        html += `<div class="label">Correct answer</div><div class="value"><code>${escHtml(String(correctAns).toUpperCase())}</code> ${escHtml(correctText)} ✅</div>`;
+      }
     } else if (item.type === 'ms') {
-      const ans = Array.isArray(item.answer) ? item.answer.join(', ').toUpperCase() : String(item.answer||'—');
-      html += `<div class="label">Answers selected</div><div class="value"><code>${escHtml(ans)}</code> ${item.correct ? '— Correct' : item.earned > 0 ? '— Partial credit' : '— Incorrect'}</div>`;
+      const ans = Array.isArray(item.answer) ? item.answer : [item.answer];
+      const qDef = questionsCache ? questionsCache.find(q => q.id === item.id) : null;
+      const optMap = {};
+      if (qDef && qDef.options) qDef.options.forEach(o => optMap[o.key] = o.text);
+      const correctSet = qDef ? new Set(qDef.correct) : null;
+      html += `<div class="label">Answers selected</div><div class="value">`;
+      ans.forEach(a => {
+        const text = optMap[a] || a;
+        const isRight = correctSet ? correctSet.has(a) : null;
+        const mark = isRight === true ? ' ✅' : isRight === false ? ' ❌' : '';
+        html += `<div style="margin:2px 0;"><code>${escHtml(a.toUpperCase())}</code> ${escHtml(text)}${mark}</div>`;
+      });
+      if (!item.correct && correctSet) {
+        html += `<div class="label" style="margin-top:6px;">Correct answers</div><div class="value">`;
+        [...correctSet].forEach(c => {
+          const text = optMap[c] || c;
+          html += `<div style="margin:2px 0;"><code>${escHtml(c.toUpperCase())}</code> ${escHtml(text)} ✅</div>`;
+        });
+        html += `</div>`;
+      }
+      html += `</div>`;
     } else if (item.type === 'write') {
       html += `<div class="label">Response</div><div class="value" style="background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:8px 10px;white-space:pre-wrap;line-height:1.5;">${escHtml(String(item.response||'(no response)'))}</div>`;
       if (item.rubricMatched != null) {
