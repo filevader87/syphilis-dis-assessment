@@ -745,35 +745,39 @@ async function showTesterDetail(token) {
       const qDef = questionsCache ? questionsCache.find(q => q.id === item.id) : null;
       const optMap = {};
       if (qDef && qDef.options) qDef.options.forEach(o => optMap[o.key] = o.text);
-      const ansText = optMap[item.answer] || item.answer;
+      const userAnswer = String(item.response ?? item.answer ?? '');
+      const ansText = optMap[userAnswer] || userAnswer;
       const correctAns = qDef ? qDef.correct : null;
       const correctText = correctAns ? (optMap[correctAns] || correctAns) : null;
-      html += `<div class="label">Answer</div><div class="value"><code>${escHtml(String(item.answer||'—').toUpperCase())}</code> ${escHtml(ansText !== item.answer ? '— ' + ansText : '')} ${item.correct ? '✅ Correct' : '❌ Incorrect'}</div>`;
+      html += '<div class="label">Answer</div><div class="value"><code>' + escHtml(userAnswer.toUpperCase()) + '</code> ' + escHtml(ansText !== userAnswer ? '— ' + ansText : '') + ' ' + (item.correct ? '✅ Correct' : '❌ Incorrect') + '</div>';
       if (!item.correct && correctText) {
-        html += `<div class="label">Correct answer</div><div class="value"><code>${escHtml(String(correctAns).toUpperCase())}</code> ${escHtml(correctText)} ✅</div>`;
+        html += '<div class="label">Correct answer</div><div class="value"><code>' + escHtml(String(correctAns).toUpperCase()) + '</code> ' + escHtml(correctText) + ' ✅</div>';
       }
     } else if (item.type === 'ms') {
-      const ans = Array.isArray(item.answer) ? item.answer : [item.answer];
+      const rawAns = item.response ?? item.answer ?? [];
+      const ans = Array.isArray(rawAns) ? rawAns.filter(Boolean) : [rawAns].filter(Boolean);
       const qDef = questionsCache ? questionsCache.find(q => q.id === item.id) : null;
       const optMap = {};
       if (qDef && qDef.options) qDef.options.forEach(o => optMap[o.key] = o.text);
       const correctSet = qDef ? new Set(qDef.correct) : null;
-      html += `<div class="label">Answers selected</div><div class="value">`;
+      html += '<div class="label">Answers selected</div><div class="value">';
       ans.forEach(a => {
-        const text = optMap[a] || a;
-        const isRight = correctSet ? correctSet.has(a) : null;
+        const safeA = String(a || '');
+        const text = optMap[safeA] || safeA;
+        const isRight = correctSet ? correctSet.has(safeA) : null;
         const mark = isRight === true ? ' ✅' : isRight === false ? ' ❌' : '';
-        html += `<div style="margin:2px 0;"><code>${escHtml(a.toUpperCase())}</code> ${escHtml(text)}${mark}</div>`;
+        html += '<div style="margin:2px 0;"><code>' + escHtml(safeA.toUpperCase()) + '</code> ' + escHtml(text) + mark + '</div>';
       });
       if (!item.correct && correctSet) {
-        html += `<div class="label" style="margin-top:6px;">Correct answers</div><div class="value">`;
+        html += '<div class="label" style="margin-top:6px;">Correct answers</div><div class="value">';
         [...correctSet].forEach(c => {
-          const text = optMap[c] || c;
-          html += `<div style="margin:2px 0;"><code>${escHtml(c.toUpperCase())}</code> ${escHtml(text)} ✅</div>`;
+          const safeC = String(c || '');
+          const text = optMap[safeC] || safeC;
+          html += '<div style="margin:2px 0;"><code>' + escHtml(safeC.toUpperCase()) + '</code> ' + escHtml(text) + ' ✅</div>';
         });
-        html += `</div>`;
+        html += '</div>';
       }
-      html += `</div>`;
+      html += '</div>';
     } else if (item.type === 'write') {
       html += `<div class="label">Response</div><div class="value" style="background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:8px 10px;white-space:pre-wrap;line-height:1.5;">${escHtml(String(item.response||'(no response)'))}</div>`;
       if (item.rubricMatched != null) {
