@@ -113,6 +113,43 @@
   .login-wrap input { width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; font-size:15px; margin-top:6px; }
   .login-wrap button { background:var(--primary); color:#fff; border:0; padding:10px 20px; border-radius:6px; font-weight:600; cursor:pointer; margin-top:10px; }
   .login-err { color:var(--bad); font-size:13px; margin-top:8px; }
+
+  /* ── NEW: Tester detail modal ── */
+  .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1000; display:flex; align-items:flex-start; justify-content:center; padding:30px 10px; overflow-y:auto; }
+  .modal-content { background:var(--card); border-radius:12px; max-width:900px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,.2); padding:0; position:relative; }
+  .modal-header { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border); background:#f8fafc; border-radius:12px 12px 0 0; }
+  .modal-header h2 { font-size:16px; color:var(--text); text-transform:none; letter-spacing:0; margin:0; }
+  .modal-close { background:var(--border); border:0; width:28px; height:28px; border-radius:50%; cursor:pointer; font-size:16px; color:var(--muted); display:flex; align-items:center; justify-content:center; }
+  .modal-close:hover { background:#d1d5db; }
+  .modal-body { padding:16px 20px; max-height:70vh; overflow-y:auto; }
+  .modal-meta { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px; font-size:13px; }
+  .modal-meta span { background:#f0f4ff; padding:3px 10px; border-radius:6px; }
+  .detail-item { border:1px solid var(--border); border-radius:8px; margin-bottom:8px; overflow:hidden; }
+  .detail-item-header { display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:#f8fafc; cursor:pointer; }
+  .detail-item-header .qid { font-weight:700; font-size:13px; width:36px; }
+  .detail-item-header .qdomain { color:var(--muted); font-size:12px; flex:1; margin-left:8px; }
+  .detail-item-header .qscore { font-weight:600; font-size:13px; min-width:52px; text-align:right; }
+  .detail-item-header .qstatus { min-width:20px; text-align:center; font-size:14px; }
+  .detail-item-body { padding:10px 12px; border-top:1px solid var(--border); font-size:13px; }
+  .detail-item-body .label { font-size:11px; color:var(--muted); text-transform:uppercase; margin-bottom:2px; }
+  .detail-item-body .value { margin-bottom:8px; line-height:1.5; }
+  .detail-item-body .value code { background:#f1f5f9; padding:2px 6px; border-radius:4px; font-size:12px; }
+  .override-history { background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:8px 10px; font-size:12px; margin-top:6px; }
+  .override-history .oh-title { font-weight:600; color:#92400e; margin-bottom:4px; }
+  .override-history .oh-entry { color:#78350f; margin-left:8px; }
+  .clickable-token { cursor:pointer; color:var(--primary); text-decoration:underline; text-decoration-style:dotted; }
+  .clickable-token:hover { color:#0842a0; text-decoration-style:solid; }
+
+  /* ── NEW: Heat map table ── */
+  .heatmap-wrap { overflow-x:auto; }
+  .heatmap-table { font-size:11px; border-collapse:separate; border-spacing:2px; }
+  .heatmap-table th, .heatmap-table td { padding:4px 5px; text-align:center; min-width:28px; border:0; }
+  .heatmap-table th:first-child, .heatmap-table td:first-child { text-align:left; min-width:100px; font-weight:600; position:sticky; left:0; background:var(--card); z-index:1; }
+  .heatmap-cell { border-radius:3px; font-weight:600; }
+  .hm-full { background:#dcfce7; color:#166534; }
+  .hm-partial { background:#fef3c7; color:#92400e; }
+  .hm-zero { background:#fee2e2; color:#991b1b; }
+  .hm-na { background:#f3f4f6; color:#9ca3af; }
 </style>
 </head>
 <body>
@@ -122,6 +159,7 @@
 const SECRET_KEY = 'dis_admin_secret';
 let secret = sessionStorage.getItem(SECRET_KEY) || '';
 let charts = {};
+let submissionsCache = null; // cached raw submissions for detail views
 
 const pctClass  = p => p >= 80 ? 'pct-good' : p >= 70 ? 'pct-warn' : 'pct-bad';
 const barColor  = p => p >= 80 ? '#16a34a'  : p >= 70 ? '#eab308'  : '#dc2626';
@@ -188,7 +226,10 @@ function shell() {
         <div class="card"><h2>Domain performance (all testers)</h2><canvas id="domainChart" height="240"></canvas></div>
         <div class="card"><h2>Program proficiency bands</h2><canvas id="bandChart" height="240"></canvas></div>
       </div>
-      <div class="card" style="margin-bottom:14px;"><h2>Submissions over time</h2><canvas id="timelineChart" height="190"></canvas></div>
+      <div class="row2">
+        <div class="card"><h2>Score distribution</h2><canvas id="scoreDistChart" height="240"></canvas></div>
+        <div class="card"><h2>Submissions over time</h2><canvas id="timelineChart" height="240"></canvas></div>
+      </div>
 
       <div class="section-title">Tester rankings</div>
       <div class="card" style="margin-bottom:14px;">
@@ -197,7 +238,7 @@ function shell() {
           <tbody id="rankings"></tbody>
         </table>
         <p class="muted" style="margin-top:10px;">
-          <strong>Reset</strong> archives a prior attempt and allows the tester to retake after additional training.
+          Click a tester name to view their full test. <strong>Reset</strong> archives a prior attempt and allows the tester to retake after additional training.
         </p>
       </div>
 
@@ -209,8 +250,17 @@ function shell() {
         </table>
       </div>
 
+      <div class="section-title">Tester × Question heat map</div>
+      <div class="card" style="margin-bottom:14px;">
+        <div class="heatmap-wrap"><table class="heatmap-table" id="heatmapTable"></table></div>
+        <p class="muted" style="margin-top:8px;">Green = full points · Yellow = partial · Red = zero · Gray = not answered</p>
+      </div>
+
       <div class="section-title">Write-in responses flagged for review</div>
       <div class="card" style="margin-bottom:14px;"><div id="flagged"></div></div>
+
+      <div class="section-title">Overridden responses (history + re-review)</div>
+      <div class="card" style="margin-bottom:14px;"><div id="overrideHistory"></div></div>
 
       <p class="muted" style="margin-top:6px;margin-bottom:32px;">
         Last loaded: <span id="loadedAt">—</span> &nbsp;·&nbsp;
@@ -232,6 +282,13 @@ async function load() {
     document.getElementById('kpis').innerHTML = '<p class="empty">Failed to load analytics — check that functions are deployed (not Netlify Drop).</p>';
     return;
   }
+  // Also fetch raw submissions for detail views + heatmap + override history
+  try {
+    const sr = await fetch('/.netlify/functions/submissions', { headers: {'x-admin-secret': secret} });
+    if (sr.ok) { const sd = await sr.json(); submissionsCache = sd.submissions || []; }
+    else submissionsCache = [];
+  } catch { submissionsCache = []; }
+
   document.getElementById('csvBtn').addEventListener('click', e => { e.preventDefault(); downloadCsv(); });
   document.getElementById('loadedAt').textContent = new Date().toLocaleString();
 
@@ -243,10 +300,13 @@ async function load() {
   renderRegionBandChart(m);
   renderDomainChart(m);
   renderBandChart(m);
+  renderScoreDistribution(m);
   renderTimeline(m);
   renderRankings(m);
   renderQuestionDifficulty(m);
+  renderHeatMap();
   renderFlagged(m);
+  renderOverrideHistory();
 }
 
 function destroyCharts() {
@@ -381,6 +441,39 @@ function renderBandChart(m) {
   });
 }
 
+// ─── NEW: Score distribution histogram ──────────────────────────────────────────
+function renderScoreDistribution(m) {
+  const rk = m.rankings || [];
+  const bins = [
+    {label:'0–49%',min:0,max:49,count:0},
+    {label:'50–59%',min:50,max:59,count:0},
+    {label:'60–69%',min:60,max:69,count:0},
+    {label:'70–79%',min:70,max:79,count:0},
+    {label:'80–89%',min:80,max:89,count:0},
+    {label:'90–100%',min:90,max:100,count:0}
+  ];
+  rk.forEach(r => {
+    const p = r.pct || 0;
+    const bin = bins.find(b => p >= b.min && p <= b.max);
+    if (bin) bin.count++;
+  });
+  charts.scoreDist = new Chart(document.getElementById('scoreDistChart'), {
+    type:'bar',
+    data:{
+      labels: bins.map(b=>b.label),
+      datasets:[{
+        label:'Testers',
+        data: bins.map(b=>b.count),
+        backgroundColor: ['#dc2626','#dc2626','#dc2626','#eab308','#16a34a','#16a34a']
+      }]
+    },
+    options:{
+      scales:{ y:{ beginAtZero:true, ticks:{stepSize:1} }, x:{ ticks:{font:{size:11}} } },
+      plugins:{ legend:{display:false} }
+    }
+  });
+}
+
 // ─── Timeline ─────────────────────────────────────────────────────────────────
 function renderTimeline(m) {
   const tl = m.timeline || [];
@@ -402,13 +495,13 @@ function renderTimeline(m) {
   });
 }
 
-// ─── Rankings ────────────────────────────────────────────────────────────────
+// ─── Rankings (with clickable token) ────────────────────────────────────────
 function renderRankings(m) {
   const rk = m.rankings || [];
   document.getElementById('rankings').innerHTML = rk.length
     ? rk.map((r,i) => `<tr>
-        <td class="${i===0?'rank-1':''}">${i+1}</td>
-        <td>${escHtml(r.token)}</td>
+        <td class="${i===0?'rank-1':''}\">${i+1}</td>
+        <td><span class="clickable-token" onclick="showTesterDetail('${escHtml(r.token)}')">${escHtml(r.token)}</span></td>
         <td>${regionTag(r.region)}</td>
         <td>${r.earned}/${r.max}</td>
         <td class="${pctClass(r.pct)}">${r.pct}%</td>
@@ -424,7 +517,7 @@ function renderRankings(m) {
 // ─── Question difficulty ──────────────────────────────────────────────────────
 function renderQuestionDifficulty(m) {
   const qs = Object.values(m.questionDifficulty || {}).sort((a,b) => a.pct - b.pct);
-  const CURRENT_MAX = 25; // current question bank max ID
+  const CURRENT_MAX = 25;
   document.getElementById('qDifficulty').innerHTML = qs.length
     ? qs.map(q => {
         const isLegacy = Number(q.id) > CURRENT_MAX;
@@ -438,6 +531,46 @@ function renderQuestionDifficulty(m) {
     : '<tr><td colspan="4" class="empty">No data yet.</td></tr>';
 }
 
+// ─── NEW: Heat map (tester × question) ───────────────────────────────────────
+function renderHeatMap() {
+  const subs = submissionsCache || [];
+  if (!subs.length) {
+    document.getElementById('heatmapTable').innerHTML = '<tr><td class="empty">No submissions data for heat map.</td></tr>';
+    return;
+  }
+  // Find all question IDs across submissions
+  const qIds = new Set();
+  subs.forEach(s => (s.items||[]).forEach(i => qIds.add(i.id)));
+  const sortedQIds = [...qIds].sort((a,b) => a - b);
+
+  let html = '<thead><tr><th>Tester</th>';
+  sortedQIds.forEach(q => html += `<th>Q${q}</th>`);
+  html += '<th>Total</th></tr></thead><tbody>';
+
+  subs.forEach(s => {
+    html += `<tr><td><span class="clickable-token" onclick="showTesterDetail('${escHtml(s.token)}')">${escHtml(s.token)}</span></td>`;
+    const itemMap = {};
+    (s.items||[]).forEach(i => itemMap[i.id] = i);
+    sortedQIds.forEach(qid => {
+      const item = itemMap[qid];
+      if (!item) { html += '<td class="heatmap-cell hm-na">—</td>'; return; }
+      const ratio = item.max > 0 ? item.earned / item.max : 0;
+      let cls, txt;
+      if (item.type === 'write') {
+        txt = `${item.earned}/${item.max}`;
+        cls = ratio >= 1 ? 'hm-full' : ratio > 0 ? 'hm-partial' : 'hm-zero';
+      } else {
+        txt = ratio >= 1 ? '✓' : '✗';
+        cls = ratio >= 1 ? 'hm-full' : 'hm-zero';
+      }
+      html += `<td class="heatmap-cell ${cls}" title="${escHtml(s.token)} Q${qid}: ${item.earned}/${item.max}">${txt}</td>`;
+    });
+    html += `<td class="${pctClass(s.pct)}" style="font-weight:700;">${s.earned}/${s.max} (${s.pct}%)</td></tr>`;
+  });
+  html += '</tbody>';
+  document.getElementById('heatmapTable').innerHTML = html;
+}
+
 // ─── Flagged write-ins (grouped by tester) ─────────────────────────────────────
 function renderFlagged(m) {
   const f = m.flaggedReviews || [];
@@ -445,14 +578,12 @@ function renderFlagged(m) {
     document.getElementById('flagged').innerHTML = '<div class="empty">No write-in responses awaiting review.</div>';
     return;
   }
-  // Group by token
   const groups = {};
   f.forEach(r => {
     const key = r.token || 'Unknown';
     if (!groups[key]) groups[key] = { token: key, region: r.region, items: [] };
     groups[key].items.push(r);
   });
-  // Sort: testers with more pending items first
   const sorted = Object.values(groups).sort((a, b) => b.items.length - a.items.length);
 
   document.getElementById('flagged').innerHTML = sorted.map(g => {
@@ -496,6 +627,150 @@ function toggleReviewCard(cardId) {
   if (el) el.classList.toggle('open');
 }
 
+// ─── NEW: Override history + re-review ────────────────────────────────────────
+function renderOverrideHistory() {
+  const subs = submissionsCache || [];
+  const entries = [];
+  subs.forEach(s => {
+    (s.items||[]).forEach(item => {
+      if (item.overrides && item.overrides.length > 0) {
+        entries.push({ token: s.token, region: s.region, item });
+      }
+    });
+  });
+  if (!entries.length) {
+    document.getElementById('overrideHistory').innerHTML = '<div class="empty">No overrides have been applied yet.</div>';
+    return;
+  }
+  // Group by token
+  const groups = {};
+  entries.forEach(e => {
+    if (!groups[e.token]) groups[e.token] = { token: e.token, region: e.region, items: [] };
+    groups[e.token].items.push(e.item);
+  });
+
+  document.getElementById('overrideHistory').innerHTML = Object.values(groups).map(g => {
+    const cardId = 'oh-' + escHtml(g.token).replace(/\s+/g, '-');
+    return `
+      <div class="review-card" id="${cardId}">
+        <div class="review-card-header" onclick="toggleReviewCard('${cardId}')">
+          <div>
+            <span class="token">${escHtml(g.token)}</span>
+            <span style="margin-left:6px;">${regionTag(g.region)}</span>
+          </div>
+          <div class="meta">
+            <span class="review-badge done">${g.items.length} override${g.items.length===1?'':'s'}</span>
+            <span style="font-size:12px;color:var(--muted);">▼</span>
+          </div>
+        </div>
+        <div class="review-card-body">
+          ${g.items.map(item => `
+            <div class="review-item">
+              <div class="q-label">Q${item.id} · ${escHtml(item.domain || '')}</div>
+              <div class="rubric-info">Current: ${item.earned}/${item.max} · <span class="muted">Type: ${item.type}</span></div>
+              <div class="response-text">${escHtml(String(item.response||'').substring(0,200))}</div>
+              <div class="override-history">
+                <div class="oh-title">Override history:</div>
+                ${item.overrides.map(ov => `<div class="oh-entry">${ov.from} → ${ov.to} by ${ov.by} at ${(ov.at||'').replace('T',' ').slice(0,16)}</div>`).join('')}
+              </div>
+              <div class="override-row" style="margin-top:8px;">
+                <label>New earned:</label>
+                <input id="rre-${escHtml(g.token)}-${item.id}" type="number" min="0" placeholder="${item.earned}" />
+                <label>Max:</label>
+                <input id="rrm-${escHtml(g.token)}-${item.id}" type="number" min="0" placeholder="${item.max}" />
+                <button onclick="overrideScore('${escHtml(g.token)}',${item.id},'${cardId}')">Re-override</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ─── NEW: Tester detail modal ─────────────────────────────────────────────────
+async function showTesterDetail(token) {
+  // Find in cache first
+  let sub = (submissionsCache||[]).find(s => s.token === token);
+  if (!sub) {
+    // Try fetching
+    try {
+      const r = await fetch('/.netlify/functions/submissions', { headers: {'x-admin-secret': secret} });
+      if (r.ok) { const d = await r.json(); submissionsCache = d.submissions || []; sub = submissionsCache.find(s => s.token === token); }
+    } catch {}
+  }
+  if (!sub) { alert('Tester not found.'); return; }
+
+  const bandCls = `band-${sub.band}`;
+  const items = sub.items || [];
+  // Sort by question ID
+  items.sort((a,b) => a.id - b.id);
+
+  let html = `<div class="modal-backdrop" onclick="if(event.target===this)this.remove()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>${escHtml(sub.token)} — Full Test Detail</h2>
+        <button class="modal-close" onclick="this.closest('.modal-backdrop').remove()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-meta">
+          <span>${regionTag(sub.region)}</span>
+          <span>Score: <strong>${sub.earned}/${sub.max}</strong> (<strong class="${pctClass(sub.pct)}">${sub.pct}%</strong>)</span>
+          <span><span class="band-pill ${bandCls}">${(sub.band||'').replace(/_/g,' ')}</span></span>
+          <span class="muted">Submitted: ${(sub.timestamp||'').replace('T',' ').slice(0,16)}</span>
+        </div>`;
+
+  items.forEach(item => {
+    const ratio = item.max > 0 ? item.earned / item.max : 0;
+    const statusIcon = ratio >= 1 ? '✅' : ratio > 0 ? '🔶' : '❌';
+    const typeLabel = item.type === 'mc' ? 'Multiple Choice' : item.type === 'ms' ? 'Multi-Select' : 'Write-in';
+
+    html += `<div class="detail-item">
+      <div class="detail-item-header">
+        <span class="qid">Q${item.id}</span>
+        <span class="qdomain">${escHtml(item.domain || '')}</span>
+        <span class="qscore ${pctClass(ratio >= 1 ? 100 : ratio > 0 ? 75 : 0)}">${item.earned}/${item.max}</span>
+        <span class="qstatus">${statusIcon}</span>
+      </div>
+      <div class="detail-item-body">`;
+
+    if (item.type === 'mc') {
+      html += `<div class="label">Answer</div><div class="value"><code>${escHtml(String(item.answer||'—').toUpperCase())}</code> ${item.correct ? '— Correct' : '— Incorrect'}</div>`;
+    } else if (item.type === 'ms') {
+      const ans = Array.isArray(item.answer) ? item.answer.join(', ').toUpperCase() : String(item.answer||'—');
+      html += `<div class="label">Answers selected</div><div class="value"><code>${escHtml(ans)}</code> ${item.correct ? '— Correct' : item.earned > 0 ? '— Partial credit' : '— Incorrect'}</div>`;
+    } else if (item.type === 'write') {
+      html += `<div class="label">Response</div><div class="value" style="background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:8px 10px;white-space:pre-wrap;line-height:1.5;">${escHtml(String(item.response||'(no response)'))}</div>`;
+      if (item.rubricMatched != null) {
+        html += `<div class="label">Rubric match</div><div class="value">${item.rubricMatched}/${item.rubricTotal} keyword groups</div>`;
+      }
+    }
+    if (item.overrides && item.overrides.length) {
+      html += `<div class="override-history"><div class="oh-title">Override history:</div>`;
+      item.overrides.forEach(ov => {
+        html += `<div class="oh-entry">${ov.from} → ${ov.to} by ${ov.by} at ${(ov.at||'').replace('T',' ').slice(0,16)}${ov.maxOverride ? ' (max: '+ov.maxOverride+')' : ''}</div>`;
+      });
+      html += `</div>`;
+    }
+    html += `</div></div>`;
+  });
+
+  // Domain breakdown
+  if (sub.domains) {
+    html += `<h2 style="margin-top:16px;">Domain breakdown</h2>`;
+    Object.entries(sub.domains).forEach(([name, d]) => {
+      if (typeof d === 'object') {
+        html += `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed var(--border);font-size:13px;">
+          <span>${escHtml(name)}</span>
+          <span class="${pctClass(d.pct)}">${d.earned}/${d.max} = ${d.pct}%</span>
+        </div>`;
+      }
+    });
+  }
+
+  html += `</div></div></div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
 // ─── Actions ──────────────────────────────────────────────────────────────────
 async function resetToken(token) {
   if (!confirm(`Reset "${token}"?\n\nTheir prior attempt will be archived and they can retake the assessment.`)) return;
@@ -520,15 +795,19 @@ async function downloadCsv() {
   URL.revokeObjectURL(url);
 }
 
-// ─── Score Override ─────────────────────────────────────────────────────────
+// ─── Score Override (works for both flagged and re-override) ───────────────────
 async function overrideScore(token, questionId, cardId) {
-  const earnedEl = document.getElementById('oe-' + token + '-' + questionId);
-  const maxEl = document.getElementById('om-' + token + '-' + questionId);
+  // Try both ID prefixes: oe- (flagged) and rre- (re-review)
+  let earnedEl = document.getElementById('oe-' + token + '-' + questionId)
+              || document.getElementById('rre-' + token + '-' + questionId);
+  let maxEl    = document.getElementById('om-' + token + '-' + questionId)
+              || document.getElementById('rrm-' + token + '-' + questionId);
   const resultEl = document.getElementById('ov-result-' + questionId + '-' + token.replace(/'/g, "\\'"));
+
   if (!earnedEl) { alert('Override fields not found — try refreshing.'); return; }
   const earned = Number(earnedEl.value);
   const max = maxEl && maxEl.value !== '' ? Number(maxEl.value) : undefined;
-  if (isNaN(earned) || earned < 0) { alert('Enter a valid earned score.'); return; }
+  if (isNaN(earned) || earned < 0) { alert('Enter a valid earned score (0 or higher).'); return; }
   if (!confirm(`Override Q${questionId} for "${token}": earned = ${earned}${max != null ? ', max = ' + max : ''}?\n\nThe submission's total score, pct, band, and domain breakdown will be recalculated.`)) return;
   try {
     const r = await fetch('/.netlify/functions/override-score', {
@@ -539,12 +818,12 @@ async function overrideScore(token, questionId, cardId) {
     const d = await r.json();
     if (!r.ok) { alert('Override failed: ' + (d.error || 'HTTP ' + r.status)); return; }
     if (resultEl) resultEl.textContent = '✓ Saved — ' + d.earned + '/' + d.max + ' (' + d.pct + '%, ' + d.band.replace(/_/g,' ') + ')';
-    // Hide the overridden review item
+    // Fade the item if in flagged section
     const item = earnedEl.closest('.review-item');
     if (item) {
       item.style.opacity = '0.5';
-      item.querySelector('button').disabled = true;
-      item.querySelector('button').textContent = 'Saved';
+      const btn = item.querySelector('button');
+      if (btn) { btn.disabled = true; btn.textContent = 'Saved'; }
     }
     // Update badge count on the card
     if (cardId) {
@@ -552,12 +831,11 @@ async function overrideScore(token, questionId, cardId) {
       if (card) {
         const badge = card.querySelector('.review-badge');
         if (badge) {
-          let count = parseInt(badge.textContent) - 1;
-          if (count <= 0) {
-            badge.textContent = '✓ Done';
-            badge.className = 'review-badge done';
-          } else {
-            badge.textContent = count + (count === 1 ? ' review' : ' reviews');
+          let count = parseInt(badge.textContent);
+          if (!isNaN(count)) {
+            count--;
+            if (count <= 0) { badge.textContent = '✓ Done'; badge.className = 'review-badge done'; }
+            else badge.textContent = count + (count === 1 ? ' review' : ' reviews');
           }
         }
       }

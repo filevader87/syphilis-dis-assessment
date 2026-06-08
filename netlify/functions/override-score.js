@@ -42,7 +42,9 @@ exports.handler = async (event) => {
         item.overrides.push({ from: item.earned, to: newEarned, by: 'admin', at: new Date().toISOString(), maxOverride: newMax });
         item.earned = newEarned;
         if (newMax != null && newMax !== undefined) item.max = newMax;
-        item.correct = newEarned >= item.max;
+        // Cap: earned cannot exceed max (prevents score inflation)
+        if (item.earned > item.max) item.earned = item.max;
+        item.correct = item.earned >= item.max;
         item.flagForReview = false;
         found = true;
       }
