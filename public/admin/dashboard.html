@@ -9,6 +9,8 @@
 <link rel="apple-touch-icon" href="../apple-touch-icon-180.png">
 <link rel="manifest" href="../manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@sgratzl/chartjs-chart-boxplot@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <style>
   :root {
     --bg:#f5f7fa; --card:#fff; --primary:#0b5ed7; --text:#1f2937;
@@ -140,6 +142,18 @@
   .clickable-token { cursor:pointer; color:var(--primary); text-decoration:underline; text-decoration-style:dotted; }
   .clickable-token:hover { color:#0842a0; text-decoration-style:solid; }
 
+  /* ── NEW: Tester profile enhancements ── */
+  .profile-radar-wrap { width:100%; max-width:400px; margin:0 auto 16px; }
+  .struggle-list { margin-top:10px; }
+  .struggle-item { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:8px; margin-bottom:6px; font-size:13px; }
+  .struggle-item.critical { background:#fee2e2; border-left:4px solid #dc2626; }
+  .struggle-item.warning { background:#fef3c7; border-left:4px solid #eab308; }
+  .struggle-item.ok { background:#dcfce7; border-left:4px solid #16a34a; }
+  .struggle-item .domain-name { flex:1; font-weight:600; }
+  .struggle-item .domain-score { font-weight:700; min-width:50px; text-align:right; }
+  .struggle-item .domain-bar { width:80px; height:8px; background:#e5e7eb; border-radius:4px; overflow:hidden; }
+  .struggle-item .domain-bar-fill { height:100%; border-radius:4px; }
+
   /* ── NEW: Heat map table ── */
   .heatmap-wrap { overflow-x:auto; }
   .heatmap-table { font-size:11px; border-collapse:separate; border-spacing:2px; }
@@ -161,6 +175,29 @@ let secret = sessionStorage.getItem(SECRET_KEY) || '';
 let charts = {};
 let submissionsCache = null; // cached raw submissions for detail views
 let questionsCache = null; // cached question bank for answer display
+
+// Derive correct MC/MS answers from across all submissions (questions.json omits answer key)
+function buildCorrectAnswerMap() {
+  const map = {};
+  if (!submissionsCache) return map;
+  for (const sub of submissionsCache) {
+    for (const item of sub.items) {
+      if (item.correct && (item.type === 'mc' || item.type === 'ms') && item.response) {
+        if (item.type === 'ms') {
+          if (!map[item.id]) map[item.id] = new Set();
+          for (const a of (Array.isArray(item.response) ? item.response : [item.response])) {
+            if (a) map[item.id].add(a);
+          }
+        } else {
+          map[item.id] = item.response;
+        }
+      }
+    }
+  }
+  // Convert sets to arrays
+  for (const k of Object.keys(map)) { if (map[k] instanceof Set) map[k] = [...map[k]]; }
+  return map;
+}
 
 const pctClass  = p => p >= 80 ? 'pct-good' : p >= 70 ? 'pct-warn' : 'pct-bad';
 const barColor  = p => p >= 80 ? '#16a34a'  : p >= 70 ? '#eab308'  : '#dc2626';
@@ -230,6 +267,24 @@ function shell() {
       <div class="row2">
         <div class="card"><h2>Score distribution</h2><canvas id="scoreDistChart" height="240"></canvas></div>
         <div class="card"><h2>Submissions over time</h2><canvas id="timelineChart" height="240"></canvas></div>
+      </div>
+
+      <div class="section-title">Question performance overview</div>
+      <div class="card" style="margin-bottom:14px;">
+        <h2>Per-question mastery rate (all testers)</h2>
+        <canvas id="questionPerfChart" height="300"></canvas>
+      </div>
+
+      <div class="section-title">Domain radar — all testers</div>
+      <div class="card" style="margin-bottom:14px;">
+        <h2>Domain performance by tester (spider chart)</h2>
+        <canvas id="domainRadarChart" height="340"></canvas>
+      </div>
+
+      <div class="section-title">Domain score distribution (box plot)</div>
+      <div class="card" style="margin-bottom:14px;">
+        <h2>Score spread per domain — median, quartiles, outliers</h2>
+        <canvas id="domainBoxPlot" height="260"></canvas>
       </div>
 
       <div class="section-title">Tester rankings</div>
@@ -310,6 +365,9 @@ async function load() {
   renderBandChart(m);
   renderScoreDistribution(m);
   renderTimeline(m);
+  renderQuestionPerfChart(m);
+  renderDomainRadarChart();
+  renderDomainBoxPlot();
   renderRankings(m);
   renderQuestionDifficulty(m);
   renderHeatMap();
@@ -477,8 +535,18 @@ function renderScoreDistribution(m) {
     },
     options:{
       scales:{ y:{ beginAtZero:true, ticks:{stepSize:1} }, x:{ ticks:{font:{size:11}} } },
-      plugins:{ legend:{display:false} }
-    }
+      plugins:{
+        legend:{display:false},
+        datalabels: {
+          anchor: 'end',
+          align: 'top',
+          color: '#1f2937',
+          font: { weight: 'bold', size: 13 },
+          formatter: v => v > 0 ? v : ''
+        }
+      }
+    },
+    plugins: [ChartDataLabels]
   });
 }
 
@@ -696,6 +764,11 @@ function renderOverrideHistory() {
 }
 
 // ─── NEW: Tester detail modal ─────────────────────────────────────────────────
+let testerRadarChart = null;
+function closeTesterModal(el) {
+  if (testerRadarChart) { testerRadarChart.destroy(); testerRadarChart = null; }
+  if (el) el.remove();
+}
 async function showTesterDetail(token) {
   // Find in cache first
   let sub = (submissionsCache||[]).find(s => s.token === token);
@@ -713,11 +786,11 @@ async function showTesterDetail(token) {
   // Sort by question ID
   items.sort((a,b) => a.id - b.id);
 
-  let html = `<div class="modal-backdrop" onclick="if(event.target===this)this.remove()">
+  let html = `<div class="modal-backdrop" onclick="if(event.target===this)closeTesterModal(this)">
     <div class="modal-content">
       <div class="modal-header">
         <h2>${escHtml(sub.token)} — Full Test Detail</h2>
-        <button class="modal-close" onclick="this.closest('.modal-backdrop').remove()">✕</button>
+        <button class="modal-close" onclick="closeTesterModal(this.closest('.modal-backdrop'))">✕</button>
       </div>
       <div class="modal-body">
         <div class="modal-meta">
@@ -725,7 +798,20 @@ async function showTesterDetail(token) {
           <span>Score: <strong>${sub.earned}/${sub.max}</strong> (<strong class="${pctClass(sub.pct)}">${sub.pct}%</strong>)</span>
           <span><span class="band-pill ${bandCls}">${(sub.band||'').replace(/_/g,' ')}</span></span>
           <span class="muted">Submitted: ${(sub.timestamp||'').replace('T',' ').slice(0,16)}</span>
-        </div>`;
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:14px;">
+          <div>
+            <h3 style="font-size:13px; color:var(--muted); margin:0 0 6px; text-transform:uppercase; letter-spacing:.05em;">Domain radar</h3>
+            <div class="profile-radar-wrap"><canvas id="testerRadar" height="280"></canvas></div>
+          </div>
+          <div>
+            <h3 style="font-size:13px; color:var(--muted); margin:0 6px; text-transform:uppercase; letter-spacing:.05em;">Domain performance</h3>
+            <div class="struggle-list" id="struggleList"></div>
+          </div>
+        </div>
+
+        <h3 style="font-size:13px; color:var(--muted); margin:16px 0 8px; text-transform:uppercase; letter-spacing:.05em; border-top:1px solid var(--border); padding-top:12px;">Question detail</h3>`;
 
   items.forEach(item => {
     const ratio = item.max > 0 ? item.earned / item.max : 0;
@@ -747,7 +833,8 @@ async function showTesterDetail(token) {
       if (qDef && qDef.options) qDef.options.forEach(o => optMap[o.key] = o.text);
       const userAnswer = String(item.response ?? item.answer ?? '');
       const ansText = optMap[userAnswer] || userAnswer;
-      const correctAns = qDef ? qDef.correct : null;
+      const correctMap = buildCorrectAnswerMap();
+      const correctAns = qDef && qDef.correct ? qDef.correct : correctMap[item.id] || null;
       const correctText = correctAns ? (optMap[correctAns] || correctAns) : null;
       html += '<div class="label">Answer</div><div class="value"><code>' + escHtml(userAnswer.toUpperCase()) + '</code> ' + escHtml(ansText !== userAnswer ? '— ' + ansText : '') + ' ' + (item.correct ? '✅ Correct' : '❌ Incorrect') + '</div>';
       if (!item.correct && correctText) {
@@ -759,7 +846,8 @@ async function showTesterDetail(token) {
       const qDef = questionsCache ? questionsCache.find(q => q.id === item.id) : null;
       const optMap = {};
       if (qDef && qDef.options) qDef.options.forEach(o => optMap[o.key] = o.text);
-      const correctSet = qDef ? new Set(qDef.correct) : null;
+      const correctMap = buildCorrectAnswerMap();
+      const correctSet = (qDef && qDef.correct) ? new Set(qDef.correct) : correctMap[item.id] ? new Set(correctMap[item.id]) : null;
       html += '<div class="label">Answers selected</div><div class="value">';
       ans.forEach(a => {
         const safeA = String(a || '');
@@ -809,6 +897,10 @@ async function showTesterDetail(token) {
 
   html += `</div></div></div>`;
   document.body.insertAdjacentHTML('beforeend', html);
+
+  // Render tester profile radar chart + struggle domains
+  renderTesterProfileRadar(sub);
+  renderTesterStruggleDomains(sub);
 }
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
@@ -881,6 +973,239 @@ async function overrideScore(token, questionId, cardId) {
       }
     }
   } catch (e) { alert('Override failed: ' + e.message); }
+}
+
+// ─── CHART: Per-Question Performance Bar ────────────────────────────────────
+function renderQuestionPerfChart(m) {
+  const qs = Object.values(m.questionDifficulty || {}).sort((a,b) => a.id - b.id);
+  const CURRENT_MAX = 25;
+  const filtered = qs.filter(q => Number(q.id) <= CURRENT_MAX);
+  const labels = filtered.map(q => 'Q' + q.id);
+  const data = filtered.map(q => q.pct || 0);
+  const bgColors = data.map(p => p >= 80 ? 'rgba(22,163,74,.8)' : p >= 70 ? 'rgba(234,179,8,.8)' : 'rgba(220,38,38,.8)');
+
+  charts.questionPerf = new Chart(document.getElementById('questionPerfChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: '% mastery',
+        data,
+        backgroundColor: bgColors,
+        borderWidth: 0,
+        barPercentage: 0.7
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      scales: {
+        x: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' }, title: { display: true, text: '% of testers answering correctly' } },
+        y: { ticks: { font: { size: 11 } } }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ctx.parsed.x + '% mastery' } }
+      }
+    }
+  });
+}
+
+// ─── CHART: Domain Radar — All Testers ──────────────────────────────────────
+function renderDomainRadarChart() {
+  const subs = submissionsCache || [];
+  if (!subs.length) return;
+
+  // Collect all domain names across all submissions
+  const domainSet = new Set();
+  subs.forEach(s => {
+    if (s.domains) Object.keys(s.domains).forEach(d => { if (typeof s.domains[d] === 'object') domainSet.add(d); });
+  });
+  const domains = [...domainSet].sort();
+
+  // Color palette for up to 10 testers
+  const palette = [
+    'rgba(99,102,241,.7)',   // indigo
+    'rgba(245,158,11,.7)',   // amber
+    'rgba(16,163,74,.7)',    // green
+    'rgba(220,38,38,.7)',    // red
+    'rgba(139,92,246,.7)',   // violet
+    'rgba(6,182,212,.7)',    // cyan
+    'rgba(249,115,22,.7)',   // orange
+    'rgba(236,72,153,.7)',   // pink
+    'rgba(107,114,128,.7)',  // gray
+    'rgba(34,197,94,.7)'     // emerald
+  ];
+
+  const datasets = subs.map((s, i) => ({
+    label: s.token || ('Tester ' + (i + 1)),
+    data: domains.map(d => (s.domains && s.domains[d] && typeof s.domains[d] === 'object') ? s.domains[d].pct : 0),
+    borderColor: palette[i % palette.length],
+    backgroundColor: palette[i % palette.length].replace('.7)', '.12)'),
+    borderWidth: 2,
+    pointRadius: 3
+  }));
+
+  charts.domainRadar = new Chart(document.getElementById('domainRadarChart'), {
+    type: 'radar',
+    data: { labels: domains, datasets },
+    options: {
+      scales: {
+        r: { beginAtZero: true, max: 100, ticks: { stepSize: 20, callback: v => v + '%' }, pointLabels: { font: { size: 11 } } }
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } },
+        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.r + '%' } }
+      }
+    }
+  });
+}
+
+// ─── CHART: Domain Box Plot ─────────────────────────────────────────────────
+function renderDomainBoxPlot() {
+  const subs = submissionsCache || [];
+  if (!subs.length) return;
+
+  // Collect domain scores per tester
+  const domainScores = {};
+  subs.forEach(s => {
+    if (s.items) {
+      s.items.forEach(item => {
+        const dom = item.displayDomain || item.domain || 'Unknown';
+        if (!domainScores[dom]) domainScores[dom] = [];
+        const pct = item.max > 0 ? Math.round((item.earned / item.max) * 100) : 0;
+        domainScores[dom].push(pct);
+      });
+    }
+  });
+
+  const sortedDomains = Object.keys(domainScores).sort();
+  const boxData = sortedDomains.map(d => domainScores[d]);
+
+  charts.domainBoxPlot = new Chart(document.getElementById('domainBoxPlot'), {
+    type: 'boxplot',
+    data: {
+      labels: sortedDomains,
+      datasets: [{
+        label: 'Domain scores (%)',
+        data: boxData,
+        backgroundColor: 'rgba(11,94,215,.25)',
+        borderColor: 'rgba(11,94,215,.8)',
+        borderWidth: 1,
+        outlierBackgroundColor: 'rgba(220,38,38,.7)',
+        outlierRadius: 3
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      scales: {
+        x: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' }, title: { display: true, text: 'Score (%)' } },
+        y: { ticks: { font: { size: 11 } } }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              const raw = ctx.raw;
+              if (!raw) return '';
+              const parts = [];
+              if (raw.min != null) parts.push('Min: ' + raw.min + '%');
+              if (raw.q1 != null) parts.push('Q1: ' + raw.q1 + '%');
+              if (raw.median != null) parts.push('Median: ' + raw.median + '%');
+              if (raw.q3 != null) parts.push('Q3: ' + raw.q3 + '%');
+              if (raw.max != null) parts.push('Max: ' + raw.max + '%');
+              return parts;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// ─── CHART: Enhanced Score Distribution Histogram ───────────────────────────
+// NOTE: renderScoreDistribution(m) already exists; we enhance it with datalabels
+
+// ─── TESTER PROFILE: Radar Chart ───────────────────────────────────────────
+function renderTesterProfileRadar(sub) {
+  const canvas = document.getElementById('testerRadar');
+  if (!canvas || !sub.domains) return;
+
+  const domainNames = Object.keys(sub.domains).filter(d => typeof sub.domains[d] === 'object');
+  domainNames.sort();
+  const data = domainNames.map(d => sub.domains[d].pct || 0);
+
+  // Compute program average per domain for comparison
+  const subs = submissionsCache || [];
+  const progAvg = domainNames.map(dn => {
+    let total = 0, count = 0;
+    subs.forEach(s => {
+      if (s.domains && s.domains[dn] && typeof s.domains[dn] === 'object') {
+        total += s.domains[dn].pct || 0;
+        count++;
+      }
+    });
+    return count > 0 ? Math.round(total / count) : 0;
+  });
+
+  if (testerRadarChart) { testerRadarChart.destroy(); testerRadarChart = null; }
+  testerRadarChart = new Chart(canvas, {
+    type: 'radar',
+    data: {
+      labels: domainNames,
+      datasets: [
+        {
+          label: sub.token,
+          data,
+          borderColor: 'rgba(11,94,215,.9)',
+          backgroundColor: 'rgba(11,94,215,.15)',
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: 'rgba(11,94,215,.9)'
+        },
+        {
+          label: 'Program avg',
+          data: progAvg,
+          borderColor: 'rgba(107,114,128,.7)',
+          backgroundColor: 'rgba(107,114,128,.08)',
+          borderWidth: 1,
+          borderDash: [5, 3],
+          pointRadius: 2,
+          pointBackgroundColor: 'rgba(107,114,128,.7)'
+        }
+      ]
+    },
+    options: {
+      scales: {
+        r: { beginAtZero: true, max: 100, ticks: { stepSize: 25, callback: v => v + '%' }, pointLabels: { font: { size: 10 } } }
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } },
+        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.r + '%' } }
+      }
+    }
+  });
+}
+
+// ─── TESTER PROFILE: Struggle Domains ────────────────────────────────────────
+function renderTesterStruggleDomains(sub) {
+  const container = document.getElementById('struggleList');
+  if (!container || !sub.domains) return;
+
+  const domainEntries = Object.entries(sub.domains)
+    .filter(([_, d]) => typeof d === 'object')
+    .sort((a, b) => a[1].pct - b[1].pct); // worst first
+
+  container.innerHTML = domainEntries.map(([name, d]) => {
+    const pct = d.pct || 0;
+    const cls = pct < 70 ? 'critical' : pct < 80 ? 'warning' : 'ok';
+    const barColor = pct < 70 ? '#dc2626' : pct < 80 ? '#eab308' : '#16a34a';
+    return `<div class="struggle-item ${cls}">
+      <span class="domain-name">${escHtml(name)}</span>
+      <span class="domain-bar"><span class="domain-bar-fill" style="width:${pct}%;background:${barColor};"></span></span>
+      <span class="domain-score ${pctClass(pct)}">${d.earned}/${d.max} (${pct}%)</span>
+    </div>`;
+  }).join('');
 }
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
