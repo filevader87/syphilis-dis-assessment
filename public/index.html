@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon-180.png">
 <link rel="manifest" href="manifest.json">
 <style>
-  :root { --bg:#f5f7fa; --card:#fff; --primary:#0b5ed7; --text:#1f2937; --muted:#6b7280; --border:#e5e7eb; --good:#16a34a; --bad:#dc2626; }
+  :root { --bg:#f5f7fa; --card:#fff; --primary:#2490f7; --primary-dark:#0070e0; --text:#1f2937; --muted:#6b7280; --border:#e5e7eb; --good:#16a34a; --bad:#dc2626; }
   * { box-sizing:border-box; }
   body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:linear-gradient(135deg,#eef2ff 0%,#f5f7fa 50%,#fef3c7 100%); color:var(--text); min-height:100vh; font-size:18px; line-height:1.55; }
   header { padding:48px 24px 24px; text-align:center; }
@@ -19,9 +19,11 @@
   .stage-grid { display:grid; gap:24px; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); }
   .stage {
     background:var(--card); border:1px solid var(--border); border-radius:16px; padding:36px 32px;
-    box-shadow:0 2px 6px rgba(0,0,0,.06); cursor:pointer; transition:transform .15s, box-shadow .15s, border-color .15s;
+    box-shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06); cursor:pointer; transition:transform .15s, box-shadow .15s, border-color .15s, opacity .6s, transform .6s;
     text-align:left; text-decoration:none; color:inherit; display:flex; flex-direction:column;
+    opacity:0; transform:translateY(20px);
   }
+  .stage.visible { opacity:1; transform:translateY(0); }
   .stage:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(11,94,215,.15); border-color:var(--primary); }
   .stage .icon { width:56px; height:56px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:28px; margin-bottom:18px; }
   .stage.assess .icon { background:#dbeafe; color:var(--primary); }
@@ -68,16 +70,16 @@
       <span class="cta">Start the assessment</span>
     </a>
 
-    <button class="stage admin" id="adminCard" type="button" style="border:1px solid var(--border); font-family:inherit; background:var(--card);">
+    <a class="stage admin" id="adminCard" href="admin/dashboard.html" style="border:1px solid var(--border); font-family:inherit; background:var(--card); text-decoration:none; color:inherit;">
       <div class="icon">📊</div>
       <h2>Admin Dashboard</h2>
       <p>Program-wide analytics for supervisors and managers. Requires the shared admin secret.</p>
       <span class="cta">Sign in to dashboard</span>
-    </button>
+    </a>
 
   </div>
 </main>
-<footer>&nbsp;</footer>
+<footer>© <span id="year"></span> Syphilis 2026 DIS Program</footer>
 
 <div class="modal-bg" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
   <div class="modal">
@@ -97,13 +99,14 @@ const SECRET_KEY = 'dis_admin_secret';
 const modal = document.getElementById('modal');
 const err = document.getElementById('err');
 
-document.getElementById('adminCard').addEventListener('click', () => {
+document.getElementById('adminCard').addEventListener('click', (e) => {
   const cached = sessionStorage.getItem(SECRET_KEY);
   if (cached) {
-    location.href = 'admin/dashboard.html';
-  } else {
-    openModal();
+    // Let the link navigate naturally
+    return;
   }
+  e.preventDefault();
+  openModal();
 });
 
 function openModal() {
@@ -131,6 +134,15 @@ async function trySignIn() {
 document.getElementById('secret').addEventListener('keydown', e => { if (e.key === 'Enter') trySignIn(); });
 modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// LAND-2: Dynamic year
+document.getElementById('year').textContent = new Date().getFullYear();
+
+// LAND-1: Fade-in on scroll
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+}, { threshold: 0.15 });
+document.querySelectorAll('.stage').forEach(s => observer.observe(s));
 </script>
 </body>
 </html>

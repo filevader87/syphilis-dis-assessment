@@ -9,38 +9,57 @@
 <link rel="apple-touch-icon" href="../apple-touch-icon-180.png">
 <link rel="manifest" href="../manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@sgratzl/chartjs-chart-boxplot@4"></script>
+
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg:#f5f7fa; --card:#fff; --primary:#0b5ed7; --text:#1f2937;
-    --muted:#6b7280; --border:#e5e7eb;
-    --good:#16a34a; --warn:#eab308; --bad:#dc2626;
-    --r1:#6366f1; --r2:#f59e0b;
+    --bg:#f0f4f8; --card:#fff; --primary:#2490f7; --primary-dark:#0070e0; --primary-light:#e8f4ff;
+    --text:#0f172a; --muted:#64748b; --border:#e2e8f0; --accent-light:#e8f4ff; --accent-border:#93c5fd;
+    --good:#10b981; --warn:#f59e0b; --bad:#ef4444;
+    --r1:#4f46e5; --r2:#b45309;
   }
   * { box-sizing:border-box; }
-  body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); font-size:15px; }
-  header { background:var(--primary); color:#fff; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
-  header h1 { margin:0; font-size:19px; font-weight:600; }
+  body { margin:0; font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); font-size:15px; -webkit-font-smoothing:antialiased; line-height:1.6; }
+  header { background:linear-gradient(135deg, #0052cc 0%, #2490f7 50%, #4da6ff 100%); color:#fff; padding:20px 32px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; box-shadow:0 4px 24px rgba(0,112,224,.25); position:sticky; top:0; z-index:100; }
+  header h1 { margin:0; font-size:20px; font-weight:700; letter-spacing:-.01em; }
   .hactions { display:flex; gap:8px; align-items:center; }
   .hactions button, .hactions a.btn {
-    background:#fff; color:var(--primary); border:0; padding:7px 14px; border-radius:6px;
-    font-weight:600; cursor:pointer; text-decoration:none; font-size:13px;
+    background:rgba(255,255,255,.2); color:#fff; border:1px solid rgba(255,255,255,.35); padding:8px 16px; border-radius:8px;
+    font-weight:600; cursor:pointer; text-decoration:none; font-size:13px; backdrop-filter:blur(8px);
+    transition: all .2s ease;
   }
+  .hactions button:hover, .hactions a.btn:hover { background:rgba(255,255,255,.35); transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,.15); }
   .hactions button.ghost { background:transparent; color:#fff; border:1px solid rgba(255,255,255,.55); }
-  main { max-width:1240px; margin:22px auto; padding:0 16px; }
+  .hactions button.ghost:hover { background:rgba(255,255,255,.15); transform:translateY(-1px); }
+  main { max-width:1360px; margin:32px auto; padding:0 28px; }
 
   /* Section label */
   .section-title {
-    font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
-    color:var(--muted); margin:28px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--border);
+    font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--primary-dark); margin:36px 0 16px; padding:0;
+    display:flex; align-items:center; gap:10px;
   }
+  .section-title::after { content:''; flex:1; height:1px; background:linear-gradient(90deg, var(--border), transparent); }
+  .section-title[data-nav] { cursor:pointer; transition:color .15s; }
+  .section-title[data-nav]:hover { color:var(--primary); }
 
   /* Card grid */
-  .kpi-grid { display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); margin-bottom:4px; }
-  .card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:16px; box-shadow:0 1px 2px rgba(0,0,0,.04); }
-  .kpi .label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
-  .kpi .val   { font-size:26px; font-weight:700; margin-top:4px; }
+  .kpi-grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(185px,1fr)); margin-bottom:8px; }
+  .card { background:var(--card); border:1px solid rgba(0,0,0,.06); border-radius:14px; padding:24px; box-shadow:0 1px 3px rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.03); transition:all .25s ease; }
+  .card:hover { box-shadow:0 4px 12px rgba(0,0,0,.06),0 12px 28px rgba(0,0,0,.08); transform:translateY(-2px); }
+  .kpi .label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; font-weight:600; }
+  .kpi .val   { font-size:34px; font-weight:800; margin-top:4px; letter-spacing:-.03em; color:var(--text); }
+  .kpi { border-top:3px solid var(--border); border-left:0; padding-top:20px; }
+  .kpi:nth-child(1) { border-top-color:var(--primary); }
+  .kpi:nth-child(2) { border-top-color:var(--r1); }
+  .kpi:nth-child(3) { border-top-color:var(--primary); }
+  .kpi:nth-child(4) { border-top-color:var(--good); }
+  .kpi:nth-child(5) { border-top-color:var(--warn); }
+  .kpi:nth-child(6) { border-top-color:var(--bad); }
 
   /* Two-column row */
   .row2 { display:grid; gap:14px; grid-template-columns:1fr 1fr; margin-bottom:14px; }
@@ -49,50 +68,56 @@
   /* Region comparison */
   .region-grid { display:grid; gap:14px; grid-template-columns:1fr 1fr; margin-bottom:14px; }
   @media(max-width:820px){ .region-grid { grid-template-columns:1fr; } }
-  .region-card { border-radius:10px; padding:18px; }
-  .region-card.r1 { background:#eef2ff; border:2px solid var(--r1); }
-  .region-card.r2 { background:#fffbeb; border:2px solid var(--r2); }
+  .region-card { border-radius:14px; padding:20px; }
+  .region-card.r1 { background:linear-gradient(135deg,#eef2ff,#e0e7ff); border:1px solid rgba(99,102,241,.2); }
+  .region-card.r2 { background:linear-gradient(135deg,#fffbeb,#fef3c7); border:1px solid rgba(245,158,11,.2); }
   .region-card h3 { margin:0 0 12px; font-size:15px; }
   .region-card h3.r1 { color:var(--r1); }
   .region-card h3.r2 { color:#b45309; }
   .mini-kpi-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
-  .mini-kpi { flex:1; min-width:90px; background:rgba(255,255,255,.7); border-radius:8px; padding:10px; text-align:center; }
-  .mini-kpi .ml { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
-  .mini-kpi .mv { font-size:20px; font-weight:700; margin-top:2px; }
+  .mini-kpi { flex:1; min-width:90px; background:rgba(255,255,255,.85); border-radius:10px; padding:12px; text-align:center; backdrop-filter:blur(4px); }
+  .mini-kpi .ml { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+  .mini-kpi .mv { font-size:22px; font-weight:800; margin-top:2px; letter-spacing:-.02em; }
   .domain-bar-row { display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px dashed var(--border); font-size:13px; }
   .domain-bar-row:last-child { border:0; }
   .bar-wrap { width:120px; height:7px; background:#e5e7eb; border-radius:4px; overflow:hidden; display:inline-block; margin:0 8px; vertical-align:middle; }
-  .bar-fill { height:100%; border-radius:4px; }
+  .bar-fill { height:100%; border-radius:4px; background:linear-gradient(90deg, #0070e0, #2490f7); }
 
   /* Shared styles */
-  h2 { font-size:13px; margin:0 0 12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
-  table { width:100%; border-collapse:collapse; font-size:13px; }
-  th,td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--border); }
-  th { color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; }
-  .alert-box { padding:9px 12px; border-radius:6px; margin-bottom:8px; font-size:13px; }
-  .alert-box.critical { background:#fee2e2; color:#991b1b; border-left:4px solid var(--bad); }
-  .alert-box.warning  { background:#fef3c7; color:#92400e; border-left:4px solid var(--warn); }
+  h2 { font-size:14px; margin:0 0 16px; color:var(--text); text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
+  h3 { font-size:12px; margin:0 0 14px; color:var(--primary); text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
+  table { width:100%; border-collapse:separate; border-spacing:0; font-size:13px; }
+  th,td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--border); }
+  th { color:var(--muted); font-weight:600; font-size:10px; text-transform:uppercase; letter-spacing:.05em; background:#f8fafc; }
+  tbody tr { transition: background .15s; }
+  tbody tr:nth-child(even) { background:#fafbfc; }
+  tbody tr:hover { background:var(--primary-light); }
+  .alert-box { padding:10px 14px; border-radius:8px; margin-bottom:8px; font-size:13px; }
+  .alert-box.critical { background:#fef2f2; color:#991b1b; border-left:4px solid var(--bad); }
+  .alert-box.warning  { background:#fffbeb; color:#92400e; border-left:4px solid var(--warn); }
   .empty { color:var(--muted); font-style:italic; padding:6px 0; }
   .rank-1 { font-weight:700; color:var(--good); }
   .band-pill { padding:2px 7px; border-radius:999px; font-size:10px; font-weight:700; text-transform:uppercase; }
-  .band-proficient         { background:#dcfce7; color:#166534; }
+  .band-proficient         { background:#d1fae5; color:#065f46; }
   .band-needs_reinforcement { background:#fef3c7; color:#92400e; }
   .band-needs_retraining   { background:#fee2e2; color:#991b1b; }
   .pct-good { color:var(--good); font-weight:600; }
   .pct-warn { color:var(--warn); font-weight:600; }
   .pct-bad  { color:var(--bad);  font-weight:600; }
-  .tag-r1 { background:#eef2ff; color:var(--r1); padding:1px 7px; border-radius:999px; font-size:10px; font-weight:600; }
-  .tag-r2 { background:#fffbeb; color:#b45309;   padding:1px 7px; border-radius:999px; font-size:10px; font-weight:600; }
+  .tag-r1 { background:#eef2ff; color:var(--r1); padding:2px 8px; border-radius:999px; font-size:10px; font-weight:600; }
+  .tag-r2 { background:#fffbeb; color:var(--r2);   padding:2px 8px; border-radius:999px; font-size:10px; font-weight:600; }
   .muted  { color:var(--muted); font-size:11px; }
   details { margin-top:5px; }
+  :focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
+  .clickable-token:focus-visible { outline-offset:1px; }
   summary { cursor:pointer; color:var(--primary); font-size:13px; }
   pre.resp { background:#f9fafb; border:1px solid var(--border); padding:8px; border-radius:6px; white-space:pre-wrap; font-size:12px; margin:5px 0 0; }
 
   /* Tester review cards */
-  .review-card { border:1px solid var(--border); border-radius:8px; margin-bottom:8px; overflow:hidden; transition:box-shadow .15s; }
-  .review-card:hover { box-shadow:0 2px 8px rgba(0,0,0,.08); }
-  .review-card-header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; cursor:pointer; user-select:none; background:var(--card); gap:8px; }
-  .review-card-header:hover { background:#f0f4ff; }
+  .review-card { border:1px solid var(--border); border-radius:10px; margin-bottom:10px; overflow:hidden; transition:all .2s ease; }
+  .review-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.08); }
+  .review-card-header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; cursor:pointer; user-select:none; background:var(--card); gap:8px; }
+  .review-card-header:hover { background:var(--primary-light); }
   .review-card-header .token { font-weight:600; font-size:14px; color:var(--text); }
   .review-card-header .meta { display:flex; align-items:center; gap:6px; }
   .review-badge { display:inline-flex; align-items:center; justify-content:center; min-width:22px; height:22px; padding:0 6px; border-radius:999px; font-size:11px; font-weight:700; }
@@ -112,8 +137,10 @@
 
   /* Login */
   .login-wrap { max-width:400px; margin:80px auto; }
-  .login-wrap input { width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; font-size:15px; margin-top:6px; }
-  .login-wrap button { background:var(--primary); color:#fff; border:0; padding:10px 20px; border-radius:6px; font-weight:600; cursor:pointer; margin-top:10px; }
+  .login-wrap input { width:100%; padding:12px; border:1px solid var(--border); border-radius:10px; font-size:15px; margin-top:6px; transition:border-color .2s; }
+  .login-wrap input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(36,144,247,.15); }
+  .login-wrap button { background:var(--primary); color:#fff; border:0; padding:12px 24px; border-radius:10px; font-weight:600; cursor:pointer; margin-top:10px; transition:all .2s; }
+  .login-wrap button:hover { background:var(--primary-dark); transform:translateY(-1px); box-shadow:0 4px 12px rgba(36,144,247,.3); }
   .login-err { color:var(--bad); font-size:13px; margin-top:8px; }
 
   /* ── NEW: Tester detail modal ── */
@@ -123,9 +150,9 @@
   .modal-header h2 { font-size:16px; color:var(--text); text-transform:none; letter-spacing:0; margin:0; }
   .modal-close { background:var(--border); border:0; width:28px; height:28px; border-radius:50%; cursor:pointer; font-size:16px; color:var(--muted); display:flex; align-items:center; justify-content:center; }
   .modal-close:hover { background:#d1d5db; }
-  .modal-body { padding:16px 20px; max-height:70vh; overflow-y:auto; }
+  .modal-body { padding:16px 20px; max-height:85vh; overflow-y:auto; }
   .modal-meta { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px; font-size:13px; }
-  .modal-meta span { background:#f0f4ff; padding:3px 10px; border-radius:6px; }
+  .modal-meta span { background:var(--accent-light); padding:3px 10px; border-radius:6px; }
   .detail-item { border:1px solid var(--border); border-radius:8px; margin-bottom:8px; overflow:hidden; }
   .detail-item-header { display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:#f8fafc; cursor:pointer; }
   .detail-item-header .qid { font-weight:700; font-size:13px; width:36px; }
@@ -140,14 +167,14 @@
   .override-history .oh-title { font-weight:600; color:#92400e; margin-bottom:4px; }
   .override-history .oh-entry { color:#78350f; margin-left:8px; }
   .clickable-token { cursor:pointer; color:var(--primary); text-decoration:underline; text-decoration-style:dotted; }
-  .clickable-token:hover { color:#0842a0; text-decoration-style:solid; }
+  .clickable-token:hover { color:#0870cc; text-decoration-style:solid; }
 
   /* ── NEW: Tester profile enhancements ── */
   .profile-radar-wrap { width:100%; max-width:400px; margin:0 auto 16px; }
   .struggle-list { margin-top:10px; }
   .struggle-item { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:8px; margin-bottom:6px; font-size:13px; }
   .struggle-item.critical { background:#fee2e2; border-left:4px solid #dc2626; }
-  .struggle-item.warning { background:#fef3c7; border-left:4px solid #eab308; }
+  .struggle-item.warning { background:#fef3c7; border-left:4px solid #ca8a04; }
   .struggle-item.ok { background:#dcfce7; border-left:4px solid #16a34a; }
   .struggle-item .domain-name { flex:1; font-weight:600; }
   .struggle-item .domain-score { font-weight:700; min-width:50px; text-align:right; }
@@ -160,21 +187,105 @@
   .heatmap-table th, .heatmap-table td { padding:4px 5px; text-align:center; min-width:28px; border:0; }
   .heatmap-table th:first-child, .heatmap-table td:first-child { text-align:left; min-width:100px; font-weight:600; position:sticky; left:0; background:var(--card); z-index:1; }
   .heatmap-cell { border-radius:3px; font-weight:600; }
-  .hm-full { background:#dcfce7; color:#166534; }
-  .hm-partial { background:#fef3c7; color:#92400e; }
-  .hm-zero { background:#fee2e2; color:#991b1b; }
+  .hm-full { background:#bbf7d0; color:#14532d; }
+  .hm-partial { background:#fde68a; color:#78350f; }
+  .hm-zero { background:#fecaca; color:#7f1d1d; }
   .hm-na { background:#f3f4f6; color:#9ca3af; }
+
+  /* Fade-in animation for cards on scroll */
+  .fade-in { opacity:0; transform:translateY(24px); transition:opacity .6s cubic-bezier(.16,1,.3,1),transform .6s cubic-bezier(.16,1,.3,1); }
+  .fade-in.visible { opacity:1; transform:translateY(0); }
+
+  /* ── NEW: Section nav pills ── */
+  .section-nav { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:20px; }
+  .section-nav a { background:var(--card); border:1px solid var(--border); border-radius:999px; padding:5px 12px; font-size:11px; font-weight:600; color:var(--muted); text-decoration:none; cursor:pointer; transition:all .15s; }
+  .section-nav a:hover { background:var(--primary-light); border-color:var(--primary); color:var(--primary-dark); }
+
+  /* ── NEW: Sticky table headers ── */
+  .rankings-wrap { overflow-x:auto; }
+  table thead th { position:sticky; top:0; z-index:2; background:#f8fafc; }
+  .heatmap-table thead th { position:sticky; top:0; z-index:3; background:var(--card); }
+
+  /* ── NEW: Chart skeleton ── */
+  .chart-skeleton { position:relative; }
+  .chart-skeleton::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg, #f8fafc 25%, #f1f5f9 50%, #f8fafc 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:6px; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+  /* ── NEW: Threshold reference line on charts ── */
+  .threshold-line { position:absolute; left:0; right:0; border-top:1px dashed rgba(36,144,247,.4); pointer-events:none; }
+
+  /* ── NEW: Chart card with empty state ── */
+  .chart-empty { display:flex; align-items:center; justify-content:center; min-height:200px; color:var(--muted); font-size:13px; font-style:italic; }
+
+  /* ── NEW: Review card a11y ── */
+  .review-card-header[role="button"] { outline:none; }
+  .review-card-header[role="button"]:focus-visible { outline:2px solid var(--primary); outline-offset:-2px; }
+
+  /* ── NEW: Responsive chart font scaling ── */
+  @media(max-width:820px) {
+    .section-nav { overflow-x:auto; flex-wrap:nowrap; -webkit-overflow-scrolling:touch; }
+    .section-nav a { white-space:nowrap; }
+  }
+
+  @media(max-width:820px){ .modal-content{max-width:100%;border-radius:0} .modal-body{max-height:80vh} }
+  @media print { header{background:#fff!important;color:#000!important;box-shadow:none!important} .card{box-shadow:none;border:1px solid #ccc;transform:none!important} canvas{max-height:300px} .review-card,.modal-backdrop{display:none} body{font-size:12px} .fade-in{opacity:1;transform:none} .section-nav{display:none} }
 </style>
 </head>
 <body>
 <div id="app"></div>
 
 <script>
-const SECRET_KEY = 'dis_admin_secret';
+// ─── Chart.js global defaults (modern look) ────────────────────────────
+Chart.defaults.font.family = 'system-ui,-apple-system,Segoe UI,Roboto,sans-serif';
+Chart.defaults.color = '#6b7280';
+
+const SECRET_KEY='dis_admin_secret';
 let secret = sessionStorage.getItem(SECRET_KEY) || '';
 let charts = {};
+
+// ─── Per-chart styling helpers (applied to each chart options) ──────────
+const modernTooltip = { backgroundColor:'#0f172a', cornerRadius:10, padding:12, titleFont:{weight:'bold',size:13}, bodyFont:{size:12}, borderColor:'rgba(36,144,247,.4)', borderWidth:1, titleColor:'#fff', bodyColor:'#cbd5e1' };
+const lightGrid = { color:'rgba(0,0,0,.05)' };
+const noBorder = { display:false };
+const chartAnim = { duration:400, easing:'easeOutQuart' };
+
+// Threshold reference line plugin — draws dashed lines at 70% and 80%
+const thresholdPlugin = {
+  id: 'thresholdLines',
+  afterDraw(chart) {
+    if (!chart.options.plugins.thresholdLines) return;
+    const opts = chart.options.plugins.thresholdLines;
+    if (!opts.lines || !opts.lines.length) return;
+    const ctx = chart.ctx;
+    const xScale = chart.scales.x;
+    const yScale = chart.scales.y;
+    if (!xScale && !yScale) return;
+    opts.lines.forEach(line => {
+      const isHorizontal = opts.orientation === 'y';
+      if (isHorizontal && yScale) {
+        const y = yScale.getPixelForValue(line.value);
+        ctx.save();
+        ctx.beginPath();
+        ctx.setLineDash([4, 3]);
+        ctx.strokeStyle = line.color || 'rgba(36,144,247,.35)';
+        ctx.lineWidth = 1.5;
+        ctx.moveTo(chart.chartArea.left, y);
+        ctx.lineTo(chart.chartArea.right, y);
+        ctx.stroke();
+        if (line.label) {
+          ctx.font = '10px system-ui';
+          ctx.fillStyle = line.color || 'rgba(36,144,247,.6)';
+          ctx.textAlign = 'right';
+          ctx.fillText(line.label, chart.chartArea.right - 4, y - 3);
+        }
+        ctx.restore();
+      }
+    });
+  }
+};
 let submissionsCache = null; // cached raw submissions for detail views
 let questionsCache = null; // cached question bank for answer display
+let analyticsData = null;  // cached analytics for PDF report
 
 // Derive correct MC/MS answers from across all submissions (questions.json omits answer key)
 function buildCorrectAnswerMap() {
@@ -200,13 +311,23 @@ function buildCorrectAnswerMap() {
 }
 
 const pctClass  = p => p >= 80 ? 'pct-good' : p >= 70 ? 'pct-warn' : 'pct-bad';
-const barColor  = p => p >= 80 ? '#16a34a'  : p >= 70 ? '#eab308'  : '#dc2626';
+const barColor  = p => p >= 80 ? '#16a34a'  : p >= 70 ? '#ca8a04'  : '#dc2626';
 const escHtml   = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const regionTag = r => r === 'Region 1'
   ? `<span class="tag-r1">Region 1</span>`
   : r === 'Region 2'
     ? `<span class="tag-r2">Region 2</span>`
     : `<span class="muted">${escHtml(r)}</span>`;
+
+// ─── Section nav helper ─────────────────────────────────────────────────────
+function scrollToSection(id) {
+  const el = document.getElementById(id);
+  if (el) {
+    const offset = 70;
+    const top = el.getBoundingClientRect().top + window.pageYOffset - offset;
+    window.scrollTo({ top, behavior: 'smooth' });
+  }
+}
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
 function loginScreen(msg) {
@@ -236,59 +357,77 @@ function shell() {
         <h1>DIS Admin Dashboard — Syphilis 2026</h1>
       </div>
       <div class="hactions">
-        <a class="btn" id="csvBtn" href="#">⇩ Export CSV</a>
+        <button id="csvBtn" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.35);padding:8px 16px;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;backdrop-filter:blur(8px);transition:all .2s ease;">⇩ Export CSV</button>
+        <button onclick="exportPDF()">⇩ PDF</button>
+        <button class="ghost" onclick="togglePresentation()">▶ Present</button>
         <button onclick="load()">↻ Refresh</button>
         <button class="ghost" onclick="signOut()">Sign out</button>
       </div>
     </header>
     <main>
-      <div class="section-title">Program overview</div>
+      <div class="section-nav" id="sectionNav">
+        <a onclick="scrollToSection('sec-overview')">Overview</a>
+        <a onclick="scrollToSection('sec-alerts')">Alerts</a>
+        <a onclick="scrollToSection('sec-regions')">Regions</a>
+        <a onclick="scrollToSection('sec-analytics')">Analytics</a>
+        <a onclick="scrollToSection('sec-questions')">Questions</a>
+        <a onclick="scrollToSection('sec-radar')">Radar</a>
+        <a onclick="scrollToSection('sec-range')">Score Range</a>
+        <a onclick="scrollToSection('sec-rankings')">Rankings</a>
+        <a onclick="scrollToSection('sec-difficulty')">Difficulty</a>
+        <a onclick="scrollToSection('sec-heatmap')">Heat Map</a>
+        <a onclick="scrollToSection('sec-flagged')">Reviews</a>
+      </div>
+
+      <h2 class="section-title" id="sec-overview">Program overview</h2>
       <div class="kpi-grid" id="kpis"></div>
 
-      <div class="section-title">Alerts</div>
+      <h2 class="section-title" id="sec-alerts">Alerts</h2>
       <div class="card" style="margin-bottom:14px;"><div id="alerts"></div></div>
 
-      <div class="section-title">Region comparison</div>
+      <h2 class="section-title" id="sec-regions">Region comparison</h2>
       <div class="region-grid" id="regionCards"></div>
       <div class="card" style="margin-bottom:14px;">
-        <h2>Domain mastery — Region 1 vs Region 2</h2>
-        <canvas id="regionDomainChart" height="220"></canvas>
+        <h3>Domain mastery — Region 1 vs Region 2</h3>
+        <canvas id="regionDomainChart"></canvas>
       </div>
       <div class="card" style="margin-bottom:14px;">
-        <h2>Proficiency band distribution by region</h2>
-        <canvas id="regionBandChart" height="160"></canvas>
+        <h3>Proficiency band distribution by region</h3>
+        <canvas id="regionBandChart"></canvas>
       </div>
 
-      <div class="section-title">Program-wide analytics</div>
+      <h2 class="section-title" id="sec-analytics">Program-wide analytics</h2>
       <div class="row2">
-        <div class="card"><h2>Domain performance (all testers)</h2><canvas id="domainChart" height="240"></canvas></div>
-        <div class="card"><h2>Program proficiency bands</h2><canvas id="bandChart" height="240"></canvas></div>
+        <div class="card"><h3>Domain performance (all testers)</h3><canvas id="domainChart"></canvas></div>
+        <div class="card"><h3>Program proficiency bands</h3><canvas id="bandChart"></canvas></div>
       </div>
       <div class="row2">
-        <div class="card"><h2>Score distribution</h2><canvas id="scoreDistChart" height="240"></canvas></div>
-        <div class="card"><h2>Submissions over time</h2><canvas id="timelineChart" height="240"></canvas></div>
+        <div class="card"><h3>Score distribution</h3><canvas id="scoreDistChart"></canvas></div>
+        <div class="card"><h3>Submissions over time</h3><canvas id="timelineChart"></canvas></div>
       </div>
 
-      <div class="section-title">Question performance overview</div>
+      <h2 class="section-title" id="sec-questions">Question performance overview</h2>
       <div class="card" style="margin-bottom:14px;">
-        <h2>Per-question mastery rate (all testers)</h2>
-        <canvas id="questionPerfChart" height="300"></canvas>
+        <h3>Per-question mastery rate (all testers)</h3>
+        <canvas id="questionPerfChart"></canvas>
       </div>
 
-      <div class="section-title">Domain radar — all testers</div>
+      <h2 class="section-title" id="sec-radar">Domain radar — all testers</h2>
       <div class="card" style="margin-bottom:14px;">
-        <h2>Domain performance by tester (spider chart)</h2>
-        <canvas id="domainRadarChart" height="340"></canvas>
+        <h3>Domain performance by tester (spider chart)</h3>
+        <div style="max-width:520px;margin:0 auto;"><canvas id="domainRadarChart"></canvas></div>
       </div>
 
-      <div class="section-title">Domain score distribution (box plot)</div>
+      <h2 class="section-title" id="sec-range">Domain score range (lowest, average, highest)</h2>
       <div class="card" style="margin-bottom:14px;">
-        <h2>Score spread per domain — median, quartiles, outliers</h2>
-        <canvas id="domainBoxPlot" height="260"></canvas>
+        <h3>Score range per domain — low, avg, high</h3>
+        <p class="muted" style="margin-top:-6px;margin-bottom:10px;">Red = lowest · Blue = average · Green = highest</p>
+        <canvas id="domainBoxPlot"></canvas>
       </div>
 
-      <div class="section-title">Tester rankings</div>
+      <h2 class="section-title" id="sec-rankings">Tester rankings</h2>
       <div class="card" style="margin-bottom:14px;">
+        <div class="rankings-wrap">
         <table>
           <thead><tr><th>#</th><th>Token</th><th>Region</th><th>Score</th><th>%</th><th>Band</th><th>Submitted</th><th></th></tr></thead>
           <tbody id="rankings"></tbody>
@@ -296,9 +435,10 @@ function shell() {
         <p class="muted" style="margin-top:10px;">
           Click a tester name to view their full test. <strong>Reset</strong> archives a prior attempt and allows the tester to retake after additional training.
         </p>
+        </div>
       </div>
 
-      <div class="section-title">Question difficulty (sorted hardest first)</div>
+      <h2 class="section-title" id="sec-difficulty">Question difficulty (sorted hardest first)</h2>
       <div class="card" style="margin-bottom:14px;">
         <table>
           <thead><tr><th>Q#</th><th>Domain</th><th>Attempts</th><th>% mastery</th></tr></thead>
@@ -306,19 +446,20 @@ function shell() {
         </table>
       </div>
 
-      <div class="section-title">Tester × Question heat map</div>
+      <h2 class="section-title" id="sec-heatmap">Tester × Question heat map</h2>
       <div class="card" style="margin-bottom:14px;">
-        <div class="heatmap-wrap"><table class="heatmap-table" id="heatmapTable"></table></div>
+        <div class="heatmap-wrap" style="max-height:400px;overflow:auto;"><table class="heatmap-table" id="heatmapTable"></table></div>
         <p class="muted" style="margin-top:8px;">Green = full points · Yellow = partial · Red = zero · Gray = not answered</p>
       </div>
 
-      <div class="section-title">Write-in responses flagged for review</div>
+      <h2 class="section-title" id="sec-flagged">Write-in responses flagged for review</h2>
       <div class="card" style="margin-bottom:14px;"><div id="flagged"></div></div>
 
-      <div class="section-title">Overridden responses (history + re-review)</div>
+      <h2 class="section-title">Overridden responses (history + re-review)</h2>
       <div class="card" style="margin-bottom:14px;"><div id="overrideHistory"></div></div>
 
       <p class="muted" style="margin-top:6px;margin-bottom:32px;">
+        DIS Assessment — Syphilis 2026 Case Definition Program &nbsp;·&nbsp;
         Last loaded: <span id="loadedAt">—</span> &nbsp;·&nbsp;
         Thresholds: ≥80% proficient &nbsp;·&nbsp; 70–80% reinforcement &nbsp;·&nbsp; &lt;70% retraining
       </p>
@@ -329,6 +470,7 @@ function shell() {
 async function load() {
   if (!secret) return loginScreen();
   shell();
+  document.getElementById('kpis').innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);">Loading analytics…</div>';
   let m;
   try {
     const r = await fetch('/.netlify/functions/analytics', { headers: {'x-admin-secret': secret} });
@@ -354,6 +496,7 @@ async function load() {
 
   document.getElementById('csvBtn').addEventListener('click', e => { e.preventDefault(); downloadCsv(); });
   document.getElementById('loadedAt').textContent = new Date().toLocaleString();
+  analyticsData = m;
 
   destroyCharts();
   renderKpis(m);
@@ -373,6 +516,13 @@ async function load() {
   renderHeatMap();
   renderFlagged(m);
   renderOverrideHistory();
+
+  // ── Fade-in animation after all cards are rendered ──
+  document.querySelectorAll('.card, .region-card').forEach(el => el.classList.add('fade-in'));
+  const fadeObs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); fadeObs.unobserve(e.target); } });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.fade-in').forEach(el => fadeObs.observe(el));
 }
 
 function destroyCharts() {
@@ -413,7 +563,7 @@ function renderRegionCards(m) {
 
   document.getElementById('regionCards').innerHTML = keys.map((reg, idx) => {
     const rb  = regions[reg];
-    const cls = idx === 0 ? 'r1' : 'r2';
+    const cls = reg === 'Region 1' ? 'r1' : 'r2';
     const domRows = Object.entries(rb.domains || {}).map(([dom, d]) => `
       <div class="domain-bar-row">
         <span style="flex:1;">${escHtml(dom)}</span>
@@ -447,13 +597,15 @@ function renderRegionDomainChart(m) {
     data: {
       labels: allDomains,
       datasets: [
-        { label:'Region 1', data: allDomains.map(d => (r1.domains||{})[d]?.pct ?? 0), backgroundColor:'rgba(99,102,241,.8)' },
-        { label:'Region 2', data: allDomains.map(d => (r2.domains||{})[d]?.pct ?? 0), backgroundColor:'rgba(245,158,11,.8)' }
+        { label:'Region 1', data: allDomains.map(d => (r1.domains||{})[d]?.pct ?? 0), backgroundColor:'rgba(79,70,229,.8)', borderRadius:6 },
+        { label:'Region 2', data: allDomains.map(d => (r2.domains||{})[d]?.pct ?? 0), backgroundColor:'rgba(245,158,11,.8)', borderRadius:6 }
       ]
     },
     options: {
-      indexAxis:'y', scales:{ x:{ beginAtZero:true, max:100, ticks:{callback:v=>v+'%'} } },
-      plugins:{ legend:{ position:'top' }, tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${ctx.parsed.x}%` } } }
+      maintainAspectRatio: true,
+      animation: chartAnim,
+      indexAxis:'y', scales:{ x:{ beginAtZero:true, max:100, grid:lightGrid, border:noBorder, ticks:{callback:v=>v+'%', font:{size:12}} }, y:{ grid:lightGrid, border:noBorder } },
+      plugins:{ legend:{ position:'top', labels:{ font:{size:11} } }, tooltip:{ ...modernTooltip, callbacks:{ label: ctx => `${ctx.dataset.label}: ${ctx.parsed.x}%` } } }
     }
   });
 }
@@ -469,14 +621,16 @@ function renderRegionBandChart(m) {
     data: {
       labels,
       datasets: [
-        { label:'Proficient (≥80%)',        data:labels.map(r=>get(r,'proficient')),          backgroundColor:'#16a34a' },
-        { label:'Needs reinforcement (70–84%)', data:labels.map(r=>get(r,'needs_reinforcement')), backgroundColor:'#eab308' },
-        { label:'Needs retraining (<70%)',   data:labels.map(r=>get(r,'needs_retraining')),    backgroundColor:'#dc2626' }
+        { label:'Proficient (≥80%)',        data:labels.map(r=>get(r,'proficient')),          backgroundColor:'#16a34a', borderRadius:6 },
+        { label:'Needs reinforcement (70–80%)', data:labels.map(r=>get(r,'needs_reinforcement')), backgroundColor:'#ca8a04', borderRadius:6 },
+        { label:'Needs retraining (<70%)',   data:labels.map(r=>get(r,'needs_retraining')),    backgroundColor:'#dc2626', borderRadius:6 }
       ]
     },
     options: {
-      plugins:{ legend:{ position:'bottom' } },
-      scales:{ x:{ stacked:true }, y:{ stacked:true, ticks:{ stepSize:1 } } }
+      maintainAspectRatio: true,
+      animation: chartAnim,
+      plugins:{ legend:{ position:'bottom', labels:{ font:{size:11} } }, tooltip:modernTooltip },
+      scales:{ x:{ stacked:true, grid:lightGrid, border:noBorder, ticks:{ font:{size:12}} }, y:{ stacked:true, grid:lightGrid, border:noBorder, ticks:{ stepSize:1, font:{size:12} } } }
     }
   });
 }
@@ -488,22 +642,46 @@ function renderDomainChart(m) {
   const data    = labels.map(d => domains[d].pct);
   charts.domain = new Chart(document.getElementById('domainChart'), {
     type:'bar',
-    data:{ labels, datasets:[{ label:'% mastery', data, backgroundColor:data.map(barColor) }] },
-    options:{ indexAxis:'y', scales:{ x:{ beginAtZero:true, max:100, ticks:{callback:v=>v+'%'} } }, plugins:{ legend:{ display:false } } }
+    data:{ labels, datasets:[{ label:'% mastery', data, backgroundColor:data.map(barColor), borderRadius:6 }] },
+    options:{ maintainAspectRatio: true, animation: chartAnim, indexAxis:'y', scales:{ x:{ beginAtZero:true, max:100, grid:lightGrid, border:noBorder, ticks:{callback:v=>v+'%', font:{size:12}} }, y:{ grid:lightGrid, border:noBorder } }, plugins:{ legend:{ display:false }, tooltip:modernTooltip, thresholdLines:{ orientation:'y', lines:[{value:80, color:'rgba(16,163,74,.35)', label:'80% proficient'},{value:70, color:'rgba(202,138,4,.35)', label:'70% reinforcement'}] } } },
+    plugins: [thresholdPlugin]
   });
 }
 
 // ─── Band doughnut ────────────────────────────────────────────────────────────
 function renderBandChart(m) {
   const b = m.bandCounts || {};
+  const totalTesters = (m.rankings || []).length;
+  const bandCenterPlugin = {
+    id: 'bandCenter',
+    afterDraw(chart) {
+      const { ctx, width, height } = chart;
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = 'bold 22px system-ui';
+      ctx.fillStyle = '#1f2937';
+      ctx.fillText(totalTesters, width / 2, height / 2 - 12);
+      ctx.font = '11px system-ui';
+      ctx.fillStyle = '#6b7280';
+      ctx.fillText('testers', width / 2, height / 2 + 4);
+      // Proficiency rate below
+      const proficientPct = totalTesters > 0 ? Math.round((b.proficient||0) / totalTesters * 100) : 0;
+      ctx.font = 'bold 11px system-ui';
+      ctx.fillStyle = '#16a34a';
+      ctx.fillText(proficientPct + '% proficient', width / 2, height / 2 + 18);
+      ctx.restore();
+    }
+  };
   charts.band = new Chart(document.getElementById('bandChart'), {
     type:'doughnut',
     data:{
       labels:['Proficient (≥80%)','Needs reinforcement (70–80%)','Needs retraining (<70%)'],
       datasets:[{ data:[b.proficient||0,b.needs_reinforcement||0,b.needs_retraining||0],
-        backgroundColor:['#16a34a','#eab308','#dc2626'] }]
+        backgroundColor:['#16a34a','#ca8a04','#dc2626'] }]
     },
-    options:{ plugins:{ legend:{ position:'bottom' } } }
+    options:{ maintainAspectRatio: true, animation: chartAnim, cutout:'55%', plugins:{ legend:{ position:'bottom', labels:{ font:{size:11} } }, tooltip:modernTooltip } },
+    plugins: [bandCenterPlugin]
   });
 }
 
@@ -511,12 +689,10 @@ function renderBandChart(m) {
 function renderScoreDistribution(m) {
   const rk = m.rankings || [];
   const bins = [
-    {label:'0–49%',min:0,max:49,count:0},
-    {label:'50–59%',min:50,max:59,count:0},
-    {label:'60–69%',min:60,max:69,count:0},
-    {label:'70–79%',min:70,max:79,count:0},
-    {label:'80–89%',min:80,max:89,count:0},
-    {label:'90–100%',min:90,max:100,count:0}
+    {label:'<70% (Retraining)',min:0,max:69,count:0,color:'#dc2626'},
+    {label:'70–79% (Reinforcement)',min:70,max:79,count:0,color:'#ca8a04'},
+    {label:'80–89% (Proficient)',min:80,max:89,count:0,color:'#16a34a'},
+    {label:'90–100% (High perf)',min:90,max:100,count:0,color:'#0d9488'}
   ];
   rk.forEach(r => {
     const p = r.pct || 0;
@@ -530,18 +706,24 @@ function renderScoreDistribution(m) {
       datasets:[{
         label:'Testers',
         data: bins.map(b=>b.count),
-        backgroundColor: ['#dc2626','#dc2626','#dc2626','#eab308','#16a34a','#16a34a']
+        backgroundColor: bins.map(b => b.color),
+        borderRadius: 6
       }]
     },
     options:{
-      scales:{ y:{ beginAtZero:true, ticks:{stepSize:1} }, x:{ ticks:{font:{size:11}} } },
+      maintainAspectRatio: true,
+      animation: chartAnim,
+      scales:{ y:{ beginAtZero:true, grid:lightGrid, border:noBorder, ticks:{stepSize:1, font:{size:12}} }, x:{ grid:lightGrid, border:noBorder, ticks:{font:{size:11}} } },
       plugins:{
         legend:{display:false},
+        tooltip:modernTooltip,
         datalabels: {
           anchor: 'end',
           align: 'top',
-          color: '#1f2937',
+          color: '#ffffff',
           font: { weight: 'bold', size: 13 },
+          textStrokeColor: '#000000',
+          textStrokeWidth: 2,
           formatter: v => v > 0 ? v : ''
         }
       }
@@ -558,14 +740,18 @@ function renderTimeline(m) {
     data:{
       labels: tl.map(t=>t.day),
       datasets:[
-        { label:'Submissions', data:tl.map(t=>t.count), borderColor:'#0b5ed7', backgroundColor:'rgba(11,94,215,.12)', yAxisID:'y' },
-        { label:'Avg %',       data:tl.map(t=>t.avgPct), borderColor:'#16a34a', backgroundColor:'rgba(22,163,74,.12)', yAxisID:'y1' }
+        { label:'Submissions', data:tl.map(t=>t.count), borderColor:'#2490f7', backgroundColor:'rgba(36,144,247,.1)', yAxisID:'y', fill:true, tension:.4, pointRadius:4, pointBackgroundColor:'#2490f7', borderWidth:2 },
+        { label:'Avg %',       data:tl.map(t=>t.avgPct), borderColor:'#10b981', backgroundColor:'rgba(16,185,129,.05)', yAxisID:'y1', fill:false, tension:.4, pointRadius:4, pointBackgroundColor:'#10b981', borderWidth:2 }
       ]
     },
     options:{
+      maintainAspectRatio: true,
+      animation: chartAnim,
+      plugins:{ tooltip:modernTooltip, legend:{ labels:{ font:{size:11} } } },
       scales:{
-        y:  { beginAtZero:true, position:'left',  title:{ display:true, text:'Submissions' } },
-        y1: { beginAtZero:true, max:100, position:'right', grid:{ drawOnChartArea:false }, title:{ display:true, text:'Avg %' } }
+        x: { grid:lightGrid, border:noBorder, ticks:{ font:{size:12}} },
+        y:  { beginAtZero:true, position:'left', grid:lightGrid, border:noBorder, title:{ display:true, text:'Submissions' }, ticks:{ font:{size:12}} },
+        y1: { beginAtZero:true, max:100, position:'right', grid:{ drawOnChartArea:false }, border:noBorder, title:{ display:true, text:'Avg %' }, ticks:{ font:{size:12}, callback:v=>v+'%' } }
       }
     }
   });
@@ -619,12 +805,12 @@ function renderHeatMap() {
   subs.forEach(s => (s.items||[]).forEach(i => qIds.add(i.id)));
   const sortedQIds = [...qIds].sort((a,b) => a - b);
 
-  let html = '<thead><tr><th>Tester</th>';
-  sortedQIds.forEach(q => html += `<th>Q${q}</th>`);
-  html += '<th>Total</th></tr></thead><tbody>';
+  let html = '<thead><tr><th scope="col">Tester</th>';
+  sortedQIds.forEach(q => html += `<th scope="col">Q${q}</th>`);
+  html += '<th scope="col">Total</th></tr></thead><tbody>';
 
   subs.forEach(s => {
-    html += `<tr><td><span class="clickable-token" onclick="showTesterDetail('${escHtml(s.token)}')">${escHtml(s.token)}</span></td>`;
+    html += `<tr><th scope="row" style="text-align:left;font-weight:600;position:sticky;left:0;background:var(--card);z-index:1;"><span class="clickable-token" onclick="showTesterDetail('${escHtml(s.token)}')">${escHtml(s.token)}</span></th>`;
     const itemMap = {};
     (s.items||[]).forEach(i => itemMap[i.id] = i);
     sortedQIds.forEach(qid => {
@@ -667,7 +853,7 @@ function renderFlagged(m) {
     const flagged = g.items.length;
     return `
       <div class="review-card" id="${cardId}">
-        <div class="review-card-header" onclick="toggleReviewCard('${cardId}')">
+        <div class="review-card-header" role="button" tabindex="0" aria-expanded="false" onclick="toggleReviewCard('${cardId}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleReviewCard('${cardId}')}">
           <div>
             <span class="token">${escHtml(g.token)}</span>
             <span style="margin-left:6px;">${regionTag(g.region)}</span>
@@ -700,7 +886,11 @@ function renderFlagged(m) {
 
 function toggleReviewCard(cardId) {
   const el = document.getElementById(cardId);
-  if (el) el.classList.toggle('open');
+  if (el) {
+    el.classList.toggle('open');
+    const header = el.querySelector('.review-card-header');
+    if (header) header.setAttribute('aria-expanded', el.classList.contains('open'));
+  }
 }
 
 // ─── NEW: Override history + re-review ────────────────────────────────────────
@@ -729,7 +919,7 @@ function renderOverrideHistory() {
     const cardId = 'oh-' + escHtml(g.token).replace(/\s+/g, '-');
     return `
       <div class="review-card" id="${cardId}">
-        <div class="review-card-header" onclick="toggleReviewCard('${cardId}')">
+        <div class="review-card-header" role="button" tabindex="0" aria-expanded="false" onclick="toggleReviewCard('${cardId}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleReviewCard('${cardId}')}">
           <div>
             <span class="token">${escHtml(g.token)}</span>
             <span style="margin-left:6px;">${regionTag(g.region)}</span>
@@ -790,6 +980,7 @@ async function showTesterDetail(token) {
     <div class="modal-content">
       <div class="modal-header">
         <h2>${escHtml(sub.token)} — Full Test Detail</h2>
+        <button class="modal-close" style="margin-left:8px;font-size:12px;background:var(--primary);color:#fff;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;" onclick="downloadTesterPDF('${escHtml(sub.token)}')">⇩ PDF</button>
         <button class="modal-close" onclick="closeTesterModal(this.closest('.modal-backdrop'))">✕</button>
       </div>
       <div class="modal-body">
@@ -940,6 +1131,7 @@ async function overrideScore(token, questionId, cardId) {
   const earned = Number(earnedEl.value);
   const max = maxEl && maxEl.value !== '' ? Number(maxEl.value) : undefined;
   if (isNaN(earned) || earned < 0) { alert('Enter a valid earned score (0 or higher).'); return; }
+  if (maxEl && maxEl.value !== '') { const maxVal = Number(maxEl.value); if (earned > maxVal) { alert('Earned cannot exceed max (' + maxVal + ').'); return; } }
   if (!confirm(`Override Q${questionId} for "${token}": earned = ${earned}${max != null ? ', max = ' + max : ''}?\n\nThe submission's total score, pct, band, and domain breakdown will be recalculated.`)) return;
   try {
     const r = await fetch('/.netlify/functions/override-score', {
@@ -982,7 +1174,7 @@ function renderQuestionPerfChart(m) {
   const filtered = qs.filter(q => Number(q.id) <= CURRENT_MAX);
   const labels = filtered.map(q => 'Q' + q.id);
   const data = filtered.map(q => q.pct || 0);
-  const bgColors = data.map(p => p >= 80 ? 'rgba(22,163,74,.8)' : p >= 70 ? 'rgba(234,179,8,.8)' : 'rgba(220,38,38,.8)');
+  const bgColors = data.map(p => p >= 80 ? 'rgba(22,163,74,.8)' : p >= 70 ? 'rgba(202,138,4,.8)' : 'rgba(220,38,38,.8)');
 
   charts.questionPerf = new Chart(document.getElementById('questionPerfChart'), {
     type: 'bar',
@@ -993,20 +1185,26 @@ function renderQuestionPerfChart(m) {
         data,
         backgroundColor: bgColors,
         borderWidth: 0,
-        barPercentage: 0.7
+        barPercentage: 0.7,
+        borderRadius: 6
       }]
     },
     options: {
+      maintainAspectRatio: true,
+      animation: chartAnim,
+      aspectRatio: 1.6,
       indexAxis: 'y',
       scales: {
-        x: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' }, title: { display: true, text: '% of testers answering correctly' } },
-        y: { ticks: { font: { size: 11 } } }
+        x: { beginAtZero: true, max: 100, grid:lightGrid, border:noBorder, ticks: { callback: v => v + '%', font:{size:12} }, title: { display: true, text: '% of testers answering correctly' } },
+        y: { grid:lightGrid, border:noBorder, ticks: { font: { size: 11 } } }
       },
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: ctx => ctx.parsed.x + '% mastery' } }
+        tooltip: { ...modernTooltip, callbacks: { label: ctx => ctx.parsed.x + '% mastery' } },
+        thresholdLines: { orientation: 'y', lines: [{value:80, color:'rgba(16,163,74,.35)', label:'80%'},{value:70, color:'rgba(202,138,4,.35)', label:'70%'}] }
       }
-    }
+    },
+    plugins: [thresholdPlugin]
   });
 }
 
@@ -1042,25 +1240,29 @@ function renderDomainRadarChart() {
     borderColor: palette[i % palette.length],
     backgroundColor: palette[i % palette.length].replace('.7)', '.12)'),
     borderWidth: 2,
-    pointRadius: 3
+    pointRadius: 3,
+    hidden: i >= 3
   }));
 
   charts.domainRadar = new Chart(document.getElementById('domainRadarChart'), {
     type: 'radar',
     data: { labels: domains, datasets },
     options: {
+      maintainAspectRatio: true,
+      animation: chartAnim,
+      aspectRatio: 1,
       scales: {
-        r: { beginAtZero: true, max: 100, ticks: { stepSize: 20, callback: v => v + '%' }, pointLabels: { font: { size: 11 } } }
+        r: { beginAtZero: true, max: 100, ticks: { stepSize: 20, callback: v => v + '%', backdropColor:'transparent' }, pointLabels: { font: { size: 11 } }, angleLines: { color: 'rgba(0,0,0,.08)' }, grid: { color: 'rgba(0,0,0,.06)' }, border: noBorder }
       },
       plugins: {
         legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } },
-        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.r + '%' } }
+        tooltip: { ...modernTooltip, callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.r + '%' } }
       }
     }
   });
 }
 
-// ─── CHART: Domain Box Plot ─────────────────────────────────────────────────
+// ─── CHART: Domain Score Range (replaces confusing box plot) ──────────────
 function renderDomainBoxPlot() {
   const subs = submissionsCache || [];
   if (!subs.length) return;
@@ -1079,45 +1281,37 @@ function renderDomainBoxPlot() {
   });
 
   const sortedDomains = Object.keys(domainScores).sort();
-  const boxData = sortedDomains.map(d => domainScores[d]);
+  // Calculate min, avg, max for each domain
+  const stats = sortedDomains.map(d => {
+    const scores = domainScores[d].sort((a,b) => a - b);
+    const min = scores[0];
+    const max = scores[scores.length - 1];
+    const avg = Math.round(scores.reduce((a,b) => a + b, 0) / scores.length);
+    return { domain: d, min, avg, max, count: scores.length };
+  });
 
   charts.domainBoxPlot = new Chart(document.getElementById('domainBoxPlot'), {
-    type: 'boxplot',
+    type: 'bar',
     data: {
       labels: sortedDomains,
-      datasets: [{
-        label: 'Domain scores (%)',
-        data: boxData,
-        backgroundColor: 'rgba(11,94,215,.25)',
-        borderColor: 'rgba(11,94,215,.8)',
-        borderWidth: 1,
-        outlierBackgroundColor: 'rgba(220,38,38,.7)',
-        outlierRadius: 3
-      }]
+      datasets: [
+        { label: 'Lowest score', data: stats.map(s => s.min), backgroundColor: 'rgba(239,68,68,.45)', borderRadius: 6, borderWidth:0 },
+        { label: 'Average score', data: stats.map(s => s.avg), backgroundColor: 'rgba(36,144,247,.55)', borderRadius: 6, borderWidth:0 },
+        { label: 'Highest score', data: stats.map(s => s.max), backgroundColor: 'rgba(16,185,129,.45)', borderRadius: 6, borderWidth:0 }
+      ]
     },
     options: {
+      maintainAspectRatio: true,
+      animation: chartAnim,
+      aspectRatio: 1.6,
       indexAxis: 'y',
       scales: {
-        x: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' }, title: { display: true, text: 'Score (%)' } },
-        y: { ticks: { font: { size: 11 } } }
+        x: { beginAtZero: true, max: 100, grid:lightGrid, border:noBorder, ticks: { callback: v => v + '%', font:{size:12} }, title: { display: true, text: 'Score (%)' } },
+        y: { grid:lightGrid, border:noBorder, ticks: { font: { size: 11 } } }
       },
       plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: function(ctx) {
-              const raw = ctx.raw;
-              if (!raw) return '';
-              const parts = [];
-              if (raw.min != null) parts.push('Min: ' + raw.min + '%');
-              if (raw.q1 != null) parts.push('Q1: ' + raw.q1 + '%');
-              if (raw.median != null) parts.push('Median: ' + raw.median + '%');
-              if (raw.q3 != null) parts.push('Q3: ' + raw.q3 + '%');
-              if (raw.max != null) parts.push('Max: ' + raw.max + '%');
-              return parts;
-            }
-          }
-        }
+        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } },
+        tooltip: { ...modernTooltip, callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.x + '%' } }
       }
     }
   });
@@ -1157,11 +1351,11 @@ function renderTesterProfileRadar(sub) {
         {
           label: sub.token,
           data,
-          borderColor: 'rgba(11,94,215,.9)',
-          backgroundColor: 'rgba(11,94,215,.15)',
+          borderColor: 'rgba(36,144,247,.9)',
+          backgroundColor: 'rgba(36,144,247,.1)',
           borderWidth: 2,
           pointRadius: 4,
-          pointBackgroundColor: 'rgba(11,94,215,.9)'
+          pointBackgroundColor: 'rgba(36,144,247,.9)'
         },
         {
           label: 'Program avg',
@@ -1176,8 +1370,10 @@ function renderTesterProfileRadar(sub) {
       ]
     },
     options: {
+      maintainAspectRatio: true,
+      animation: chartAnim,
       scales: {
-        r: { beginAtZero: true, max: 100, ticks: { stepSize: 25, callback: v => v + '%' }, pointLabels: { font: { size: 10 } } }
+        r: { beginAtZero: true, max: 100, ticks: { stepSize: 25, callback: v => v + '%', backdropColor:'transparent' }, pointLabels: { font: { size: 12 } }, border: noBorder }
       },
       plugins: {
         legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } },
@@ -1199,7 +1395,7 @@ function renderTesterStruggleDomains(sub) {
   container.innerHTML = domainEntries.map(([name, d]) => {
     const pct = d.pct || 0;
     const cls = pct < 70 ? 'critical' : pct < 80 ? 'warning' : 'ok';
-    const barColor = pct < 70 ? '#dc2626' : pct < 80 ? '#eab308' : '#16a34a';
+    const barColor = pct < 70 ? '#ef4444' : pct < 80 ? '#f59e0b' : '#2490f7';
     return `<div class="struggle-item ${cls}">
       <span class="domain-name">${escHtml(name)}</span>
       <span class="domain-bar"><span class="domain-bar-fill" style="width:${pct}%;background:${barColor};"></span></span>
@@ -1210,6 +1406,557 @@ function renderTesterStruggleDomains(sub) {
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 if (!secret) loginScreen(); else load();
-</script>
+
+// ─── Presentation Mode ──────────────────────────────────────────────────────
+let presentationMode = false;
+function togglePresentation() {
+  presentationMode = !presentationMode;
+  const header = document.querySelector('header');
+  const main = document.querySelector('main');
+  if (presentationMode) {
+    document.body.style.background = '#fff';
+    if (header) header.style.display = 'none';
+    if (main) { main.style.maxWidth = '100%'; main.style.padding = '0 24px'; }
+    document.querySelectorAll('.card').forEach(c => {
+      c.style.boxShadow = 'none';
+      c.style.border = '1px solid #e5e7eb';
+      c.style.borderRadius = '8px';
+      c.style.marginBottom = '18px';
+      c.style.padding = '20px';
+      c.style.breakInside = 'avoid';
+    });
+    document.querySelectorAll('.section-title').forEach(s => { s.style.fontSize = '13px'; s.style.marginTop = '24px'; });
+  } else {
+    document.body.style.background = '';
+    if (header) header.style.display = '';
+    if (main) { main.style.maxWidth = ''; main.style.padding = ''; }
+    document.querySelectorAll('.card').forEach(c => {
+      c.style.boxShadow = ''; c.style.border = ''; c.style.borderRadius = '';
+      c.style.marginBottom = ''; c.style.padding = ''; c.style.breakInside = '';
+    });
+    document.querySelectorAll('.section-title').forEach(s => { s.style.fontSize = ''; s.style.marginTop = ''; });
+  }
+}
+
+// ─── Individual Tester PDF — jsPDF Direct ──────────────────────────────────
+function downloadTesterPDF(token) {
+  if (typeof jspdf === 'undefined') { alert('jsPDF not loaded.'); return; }
+  let sub = (submissionsCache||[]).find(s => s.token === token);
+  if (!sub) { alert('Tester not found.'); return; }
+
+  const { jsPDF } = jspdf;
+  const items = (sub.items||[]).slice().sort((a,b) => a.id - b.id);
+  const date = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  const pageW = 210, pageH = 297, margin = 12, contentW = pageW - margin*2;
+  let y = margin;
+
+  // Sanitize text for jsPDF (Helvetica only supports WinAnsiEncoding / Latin-1)
+  function pdf(text) {
+    return String(text)
+      .replace(/✅/g, '[PASS]')
+      .replace(/❌/g, '[FAIL]')
+      .replace(/🔶/g, '[PARTIAL]')
+      .replace(/[—–]/g, '-')
+      .replace(/→/g, '->')
+      .replace(/≥/g, '>=')
+      .replace(/≤/g, '<=')
+      .replace(/"/g, '"')
+      .replace(/"/g, '"')
+      .replace(/'/g, "'")
+      .replace(/'/g, "'")
+      .replace(/…/g, '...')
+      .replace(/©/g, '(c)')
+      .replace(/®/g, '(R)')
+      .replace(/™/g, '(TM)')
+      .replace(/°/g, ' deg')
+      .replace(/[^\x00-\xFF]/g, '?'); // catch any remaining non-Latin-1
+  }
+
+  const doc = new jsPDF('p','mm','a4');
+
+  // ── Helpers ──
+  function checkPage(need) { if (y + need > pageH - 15) { doc.addPage(); y = margin; } }
+  function sectionTitle(text) {
+    checkPage(14);
+    doc.setFillColor(11, 94, 215);
+    doc.rect(margin, y, 3, 8, 'F');
+    doc.setFontSize(14);
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(11, 94, 215);
+    doc.text(pdf(text), margin + 6, y + 6);
+    y += 12;
+  }
+  function bodyText(text, opts = {}) {
+    doc.setFontSize(opts.size || 10);
+    doc.setFont('helvetica', opts.style || 'normal');
+    doc.setTextColor(opts.color || '#1f2937');
+    const lines = doc.splitTextToSize(pdf(text), contentW);
+    checkPage(lines.length * 5 + 4);
+    doc.text(lines, margin, y);
+    y += lines.length * 5 + 2;
+  }
+  function pctColor(pct) { return pct >= 80 ? '#16a34a' : pct >= 70 ? '#ca8a04' : '#dc2626'; }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // COVER / HEADER
+  // ════════════════════════════════════════════════════════════════════════
+  doc.setFillColor(11, 94, 215);
+  doc.rect(0, 0, pageW, 45, 'F');
+  doc.setFontSize(24);
+  doc.setFont('helvetica','bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text(pdf('DIS Assessment - Individual Report'), pageW/2, 22, { align:'center' });
+  doc.setFontSize(14);
+  doc.setFont('helvetica','normal');
+  doc.text(pdf('Syphilis 2026 Case Definition'), pageW/2, 32, { align:'center' });
+
+  y = 55;
+  doc.setTextColor('#6b7280');
+  doc.setFontSize(10);
+  doc.text(pdf('Generated ' + date), pageW/2, y, { align:'center' });
+  y += 12;
+
+  // ── Tester Info ──
+  sectionTitle('Tester Profile');
+  const bandLabel = (sub.band||'').replace(/_/g,' ');
+  bodyText('Name: ' + pdf(sub.token), { size:11, style:'bold' });
+  bodyText('Region: ' + pdf(sub.region||'-') + '    |    Score: ' + sub.earned + '/' + sub.max + ' (' + sub.pct + '%)    |    Band: ' + pdf(bandLabel) + '    |    Submitted: ' + pdf((sub.timestamp||'').replace('T',' ').slice(0,16)), { size:10 });
+  y += 4;
+
+  // ── Domain Radar Chart ──
+  const radarCanvas = document.getElementById('testerRadar');
+  if (radarCanvas) {
+    try {
+      const imgData = radarCanvas.toDataURL('image/png');
+      if (imgData && imgData.length > 1000) {
+        checkPage(100);
+        doc.setFontSize(9);
+        doc.setFont('helvetica','bold');
+        doc.setTextColor('#6b7280');
+        doc.text(pdf('Domain radar'), margin, y);
+        y += 4;
+        const ratio = radarCanvas.height / radarCanvas.width;
+        const imgW = contentW * 0.85;
+        const imgH = imgW * ratio;
+        doc.addImage(imgData, 'PNG', margin, y, imgW, imgH);
+        y += imgH + 8;
+      }
+    } catch(_) {}
+  }
+
+  // ── Domain Performance Summary ──
+  sectionTitle('Domain Performance');
+  const domEntries = Object.entries(sub.domains || {});
+  domEntries.forEach(([name, d]) => {
+    if (typeof d !== 'object') return;
+    const col = pctColor(d.pct || 0);
+    bodyText(pdf(name) + ': ' + d.earned + '/' + d.max + ' = ' + d.pct + '%', { size:9, color: col });
+  });
+  y += 4;
+
+  // ── Full Question Detail ──
+  sectionTitle('Question Detail');
+  const correctMap = buildCorrectAnswerMap();
+
+  items.forEach(item => {
+    checkPage(30);
+    const typeLabel = item.type === 'mc' ? 'Multiple Choice' : item.type === 'ms' ? 'Multi-Select' : 'Write-in';
+    const ratio = item.max > 0 ? item.earned / item.max : 0;
+    const statusIcon = ratio >= 1 ? '[PASS]' : ratio > 0 ? '[PARTIAL]' : '[FAIL]';
+    const col = pctClass(ratio >= 1 ? 100 : ratio > 0 ? 75 : 0);
+
+    // Question header
+    doc.setFontSize(11);
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(11, 94, 215);
+    checkPage(10);
+    doc.text(pdf('Q' + item.id + ' - ' + (item.domain || '')), margin, y);
+    y += 5;
+
+    // Full question text from questionsCache
+    const qDef = questionsCache ? questionsCache.find(q => q.id === item.id) : null;
+    if (qDef && qDef.q) {
+      doc.setFontSize(9);
+      doc.setFont('helvetica','italic');
+      doc.setTextColor('#4b5563');
+      const qLines = doc.splitTextToSize(pdf(qDef.q), contentW - 8);
+      checkPage(qLines.length * 4 + 4);
+      doc.text(qLines, margin + 4, y);
+      y += qLines.length * 4 + 2;
+    }
+
+    // Type and score
+    doc.setFontSize(9);
+    doc.setFont('helvetica','normal');
+    doc.setTextColor('#374151');
+    checkPage(8);
+    doc.text(pdf('Type: ' + typeLabel + '    Score: ' + item.earned + '/' + item.max + ' ' + statusIcon), margin + 4, y);
+    y += 5;
+
+    // MC detail
+    if (item.type === 'mc') {
+      const optMap = {};
+      if (qDef && qDef.options) qDef.options.forEach(o => optMap[o.key] = o.text);
+      const userAns = String(item.response ?? item.answer ?? '');
+      const ansText = optMap[userAns] || userAns;
+      const correctAns = (qDef && qDef.correct) ? qDef.correct : correctMap[item.id] || null;
+      const correctText = correctAns ? (optMap[correctAns] || correctAns) : null;
+      checkPage(8);
+      doc.setFont('helvetica','normal');
+      doc.setTextColor(item.correct ? '#16a34a' : '#dc2626');
+      doc.text(pdf('Answer: ' + userAns.toUpperCase() + (ansText !== userAns ? ' - ' + ansText : '') + (item.correct ? ' [PASS] Correct' : ' [FAIL] Incorrect')), margin + 8, y);
+      y += 5;
+      if (!item.correct && correctText) {
+        checkPage(5);
+        doc.setTextColor('#16a34a');
+        doc.text(pdf('Correct: ' + String(correctAns).toUpperCase() + ' - ' + correctText + ' [PASS]'), margin + 8, y);
+        y += 5;
+      }
+    }
+    // MS detail
+    else if (item.type === 'ms') {
+      const rawAns = item.response ?? item.answer ?? [];
+      const ans = Array.isArray(rawAns) ? rawAns.filter(Boolean) : [rawAns].filter(Boolean);
+      const optMap = {};
+      if (qDef && qDef.options) qDef.options.forEach(o => optMap[o.key] = o.text);
+      const correctSet = (qDef && qDef.correct) ? new Set(qDef.correct) : correctMap[item.id] ? new Set(correctMap[item.id]) : null;
+      ans.forEach(a => {
+        const safeA = String(a || '');
+        const text = optMap[safeA] || safeA;
+        const isRight = correctSet ? correctSet.has(safeA) : null;
+        const mark = isRight === true ? ' [PASS]' : isRight === false ? ' [FAIL]' : '';
+        checkPage(5);
+        doc.setFont('helvetica','normal');
+        doc.setTextColor(isRight === false ? '#dc2626' : '#374151');
+        doc.text(pdf(safeA.toUpperCase() + ' - ' + text + mark), margin + 8, y);
+        y += 4;
+      });
+      if (!item.correct && correctSet) {
+        checkPage(8);
+        doc.setFont('helvetica','bold');
+        doc.setTextColor('#16a34a');
+        doc.text('Correct answers:', margin + 8, y);
+        y += 4;
+        doc.setFont('helvetica','normal');
+        [...correctSet].forEach(c => {
+          const safeC = String(c || '');
+          const text = optMap[safeC] || safeC;
+          checkPage(5);
+          doc.text(pdf(safeC.toUpperCase() + ' - ' + text + ' [PASS]'), margin + 12, y);
+          y += 4;
+        });
+      }
+    }
+    // Write-in detail
+    else if (item.type === 'write') {
+      const resp = String(item.response || '(no response)');
+      doc.setFont('helvetica','normal');
+      doc.setTextColor('#374151');
+      const respLines = doc.splitTextToSize(pdf('Response: ' + resp), contentW - 12);
+      checkPage(respLines.length * 4 + 4);
+      doc.text(respLines, margin + 8, y);
+      y += respLines.length * 4 + 2;
+      if (item.rubricMatched != null) {
+        checkPage(5);
+        doc.setTextColor('#6b7280');
+        doc.text(pdf('Rubric match: ' + item.rubricMatched + '/' + item.rubricTotal + ' keyword groups'), margin + 8, y);
+        y += 5;
+      }
+    }
+
+    // Override history
+    if (item.overrides && item.overrides.length) {
+      item.overrides.forEach(ov => {
+        checkPage(5);
+        doc.setFontSize(8);
+        doc.setFont('helvetica','italic');
+        doc.setTextColor('#9ca3af');
+        doc.text(pdf('Override: ' + ov.from + ' -> ' + ov.to + ' by ' + (ov.by||'') + ' at ' + (ov.at||'').replace('T',' ').slice(0,16) + (ov.maxOverride ? ' (max: '+ov.maxOverride+')' : '')), margin + 8, y);
+        y += 4;
+      });
+    }
+
+    doc.setFontSize(10);
+    y += 3;
+    // Thin separator
+    doc.setDrawColor(229, 231, 235);
+    doc.line(margin, y, pageW - margin, y);
+    y += 4;
+  });
+
+  // ── Domain Breakdown Table ──
+  if (domEntries.length) {
+    sectionTitle('Domain Breakdown');
+    const headers = ['Domain', 'Earned', 'Max', 'Pct', 'Status'];
+    const colW = [contentW * 0.45, contentW * 0.13, contentW * 0.13, contentW * 0.13, contentW * 0.16];
+    checkPage(10);
+    doc.setFillColor(248, 250, 252);
+    doc.rect(margin, y, contentW, 7, 'F');
+    doc.setFontSize(8);
+    doc.setFont('helvetica','bold');
+    doc.setTextColor('#1f2937');
+    let xOff = margin;
+    headers.forEach((h, i) => { doc.text(h, xOff + 2, y + 5); xOff += colW[i]; });
+    y += 7;
+    doc.setFont('helvetica','normal');
+    domEntries.forEach(([name, d]) => {
+      if (typeof d !== 'object') return;
+      checkPage(7);
+      const pct = d.pct || 0;
+      const status = pct >= 80 ? 'Proficient' : pct >= 70 ? 'Reinforcement' : 'Retraining';
+      const row = [pdf(name), String(d.earned), String(d.max), pct + '%', status];
+      xOff = margin;
+      doc.setTextColor('#374151');
+      row.forEach((cell, i) => {
+        if (i === 3) doc.setTextColor(pctColor(pct));
+        else doc.setTextColor('#374151');
+        doc.text(pdf(String(cell)), xOff + 2, y + 4.5);
+        xOff += colW[i];
+      });
+      y += 6;
+    });
+  }
+
+  // ── Footer ──
+  y += 6;
+  checkPage(15);
+  doc.setDrawColor(229, 231, 235);
+  doc.line(margin, y, pageW - margin, y);
+  y += 4;
+  doc.setFontSize(8);
+  doc.setTextColor('#6b7280');
+  doc.text(pdf('DIS Assessment - Syphilis 2026  |  ' + date + '  |  Individual Report  |  Thresholds: >=80% proficient, 70-80% reinforcement, <70% retraining'), pageW/2, y, { align:'center' });
+
+  // ── Save ──
+  doc.save('DIS_Test_Report_' + token.replace(/\s+/g,'_') + '_' + new Date().toISOString().slice(0,10) + '.pdf');
+}
+
+// ─── PDF Export — jsPDF Direct (no html2canvas) ─────────────────────────────
+function exportPDF() {
+  const m = analyticsData;
+  if (!m || typeof jspdf === 'undefined') { alert('Load the dashboard first, then export.'); return; }
+
+  const { jsPDF } = jspdf;
+    const k = m.program || {};
+    const regions = m.regions || {};
+    const rk = m.rankings || [];
+    const date = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+    const pageW = 210, pageH = 297, margin = 12, contentW = pageW - margin*2;
+    let y = margin;
+
+    const doc = new jsPDF('p','mm','a4');
+
+    // ── Helper: check page break ──
+    function checkPage(need) { if (y + need > pageH - 15) { doc.addPage(); y = margin; } }
+
+    // ── Helper: section header ──
+    function sectionTitle(text) {
+      checkPage(14);
+      doc.setFillColor(11, 94, 215);
+      doc.rect(margin, y, 3, 8, 'F');
+      doc.setFontSize(14);
+      doc.setFont('helvetica','bold');
+      doc.setTextColor(11, 94, 215);
+      doc.text(text, margin + 6, y + 6);
+      y += 12;
+    }
+
+    // ── Helper: body text ──
+    function bodyText(text, opts = {}) {
+      doc.setFontSize(opts.size || 10);
+      doc.setFont('helvetica', opts.style || 'normal');
+      doc.setTextColor(opts.color || '#1f2937');
+      const lines = doc.splitTextToSize(text, contentW);
+      checkPage(lines.length * 5 + 4);
+      doc.text(lines, margin, y);
+      y += lines.length * 5 + 2;
+    }
+
+    // ── Helper: add chart as PNG image ──
+    function addChart(canvasId, imgW, label) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      const imgData = canvas.toDataURL('image/png');
+      if (!imgData || imgData.length < 1000) return;
+      const ratio = canvas.height / canvas.width;
+      const imgH = imgW * ratio;
+      checkPage(imgH + 14);
+      doc.setFontSize(9);
+      doc.setFont('helvetica','bold');
+      doc.setTextColor('#6b7280');
+      doc.text(label, margin, y);
+      y += 4;
+      doc.addImage(imgData, 'PNG', margin, y, imgW, imgH);
+      y += imgH + 6;
+    }
+
+    // ── Helper: KPI box ──
+    function kpiBox(x, bw, label, value, color) {
+      doc.setFillColor(240, 244, 255);
+      doc.roundedRect(x, y, bw, 18, 2, 2, 'F');
+      doc.setFontSize(7);
+      doc.setFont('helvetica','normal');
+      doc.setTextColor('#6b7280');
+      doc.text(label, x + bw/2, y + 6, { align:'center' });
+      doc.setFontSize(14);
+      doc.setFont('helvetica','bold');
+      doc.setTextColor(color || '#1f2937');
+      doc.text(String(value), x + bw/2, y + 13, { align:'center' });
+    }
+
+    // ── Helper: table ──
+    function simpleTable(headers, rows) {
+      const colW = contentW / headers.length;
+      checkPage(10 + rows.length * 7);
+      doc.setFillColor(248, 250, 252);
+      doc.rect(margin, y, contentW, 7, 'F');
+      doc.setFontSize(8);
+      doc.setFont('helvetica','bold');
+      doc.setTextColor('#1f2937');
+      headers.forEach((h, i) => doc.text(h, margin + i*colW + 2, y + 5));
+      y += 7;
+      doc.setFont('helvetica','normal');
+      doc.setTextColor('#374151');
+      rows.forEach((row, ri) => {
+        checkPage(7);
+        if (ri % 2 === 0) { doc.setFillColor(249, 250, 251); doc.rect(margin, y, contentW, 6, 'F'); }
+        row.forEach((cell, ci) => doc.text(String(cell), margin + ci*colW + 2, y + 4.5));
+        y += 6;
+      });
+      y += 4;
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // PAGE 1 — COVER
+    // ════════════════════════════════════════════════════════════════════════
+    doc.setFillColor(11, 94, 215);
+    doc.rect(0, 0, pageW, 45, 'F');
+    doc.setFontSize(24);
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text('DIS Assessment Report', pageW/2, 22, { align:'center' });
+    doc.setFontSize(14);
+    doc.setFont('helvetica','normal');
+    doc.text('Syphilis 2026 Case Definition Program', pageW/2, 32, { align:'center' });
+
+    y = 55;
+    doc.setTextColor('#6b7280');
+    doc.setFontSize(10);
+    doc.text('Generated ' + date, pageW/2, y, { align:'center' });
+    y += 15;
+
+    // ── Executive Summary ──
+    sectionTitle('Executive Summary');
+    const avgPct = k.avgPct || 0;
+    const bandWord = avgPct >= 80 ? 'proficient' : avgPct >= 70 ? 'needing reinforcement' : 'needing retraining';
+    bodyText(`The program currently has ${k.totalSubmissions||0} submission(s) from ${k.uniqueTesters||0} unique tester(s). The overall program average is ${avgPct}%, placing the program in the "${bandWord}" band. ${avgPct >= 80 ? 'The program meets the proficiency threshold.' : avgPct >= 70 ? 'Targeted reinforcement is recommended to reach proficiency.' : 'Significant retraining is needed to reach acceptable proficiency levels.'}`, { size:10 });
+
+    // Identify weakest domain
+    const domains = m.domains || {};
+    const domainEntries = Object.entries(domains).sort((a,b) => (a[1].pct||0) - (b[1].pct||0));
+    if (domainEntries.length) {
+      const weakest = domainEntries[0];
+      const strongest = domainEntries[domainEntries.length - 1];
+      bodyText(`Strongest domain: ${strongest[0]} at ${strongest[1].pct}%. Weakest domain: ${weakest[0]} at ${weakest[1].pct}%. Gap of ${strongest[1].pct - weakest[1].pct}pp suggests ${weakest[1].pct < 70 ? 'urgent retraining' : 'targeted reinforcement'} for the weakest area.`);
+    }
+
+    // Regional alert
+    const regionKeys = Object.keys(regions);
+    if (regionKeys.length > 1) {
+      const rPcts = regionKeys.map(r => ({ name:r, pct: (regions[r].avgPct||0) }));
+      rPcts.sort((a,b) => b.pct - a.pct);
+      const gap = rPcts[0].pct - rPcts[rPcts.length-1].pct;
+      if (gap > 5) bodyText(`Regional gap alert: ${rPcts[0].name} leads at ${rPcts[0].pct}% vs ${rPcts[rPcts.length-1].name} at ${rPcts[rPcts.length-1].pct}% (${gap}pp gap). Investigate training equity.`);
+    }
+
+    y += 2;
+
+    // ── KPI Overview ──
+    sectionTitle('KPI Overview');
+    const bw = (contentW - 8) / 3;
+    const avgColor = avgPct >= 80 ? '#16a34a' : avgPct >= 70 ? '#ca8a04' : '#dc2626';
+    kpiBox(margin, bw, 'TOTAL SUBMISSIONS', k.totalSubmissions||0, '#1f2937');
+    kpiBox(margin + bw + 4, bw, 'UNIQUE TESTERS', k.uniqueTesters||0, '#1f2937');
+    kpiBox(margin + (bw+4)*2, bw, 'PROGRAM AVERAGE', (avgPct||0)+'%', avgColor);
+    y += 24;
+
+    // ── Regional Analysis ──
+    if (regionKeys.length) {
+      sectionTitle('Regional Analysis');
+      regionKeys.forEach(r => {
+        const rd = regions[r];
+        bodyText(`${r}: ${rd.avgPct||0}% average, ${rd.total||0} submissions. ${rd.proficientRate||0}% proficient, ${rd.retrainingRate||0}% need retraining.`, { size:9 });
+      });
+      addChart('regionDomainChart', contentW, 'Domain mastery by region');
+      addChart('regionBandChart', contentW * 0.85, 'Proficiency bands by region');
+    }
+
+    // ── Domain Performance ──
+    sectionTitle('Domain Performance');
+    domainEntries.forEach(([name, d]) => {
+      const s = d.pct >= 80 ? 'Strong' : d.pct >= 70 ? 'Moderate' : 'Weak';
+      bodyText(`${name}: ${d.pct}% — ${s}. ${d.pct < 70 ? 'Retraining recommended.' : d.pct < 80 ? 'Reinforcement recommended.' : 'Meets proficiency.'}`, { size:9 });
+    });
+    addChart('domainChart', contentW * 0.85, 'All-tester domain mastery');
+    addChart('domainBoxPlot', contentW, 'Domain score range (low, avg, high)');
+
+    // ── Proficiency Bands ──
+    const bc = m.bandCounts || {};
+    if (bc.proficient || bc.needs_reinforcement || bc.needs_retraining) {
+      sectionTitle('Proficiency Bands');
+      bodyText(`Proficient (>=80%): ${bc.proficient||0} testers. Needs reinforcement (70-80%): ${bc.needs_reinforcement||0}. Needs retraining (<70%): ${bc.needs_retraining||0}.`, { size:9 });
+      addChart('bandChart', 80, 'Band distribution');
+    }
+
+    // ── Question Performance ──
+    if (m.questionStats && m.questionStats.length) {
+      sectionTitle('Question Performance');
+      const weakQs = m.questionStats.filter(q => q.pct < 70).sort((a,b) => a.pct - b.pct);
+      if (weakQs.length) {
+        bodyText(`${weakQs.length} question(s) below 70% mastery — review content or clarify wording:`, { size:9, style:'bold' });
+        weakQs.forEach(q => bodyText(`  Q${q.idx}: ${q.pct}% mastery`, { size:9, color:'#dc2626' }));
+      } else {
+        bodyText('All questions meet the 70% mastery threshold.', { size:9 });
+      }
+      addChart('questionPerfChart', contentW, 'Per-question mastery rate');
+    }
+
+    // ── Score Distribution ──
+    addChart('scoreDistChart', contentW * 0.9, 'Score distribution histogram');
+
+    // ── Radar ──
+    addChart('domainRadarChart', 120, 'Tester radar comparison');
+
+    // ── Timeline ──
+    addChart('timelineChart', contentW * 0.9, 'Submissions over time');
+
+    // ── Individual Tester Results ──
+    if (rk.length) {
+      sectionTitle('Individual Tester Results');
+      const headers = ['#', 'Token', 'Region', 'Score', 'Band'];
+      const rows = rk.map((r, i) => [
+        String(i+1),
+        r.token || '—',
+        r.region || '—',
+        (r.earned||0) + '/' + (r.max||0) + ' (' + (r.pct||0) + '%)',
+        r.pct >= 80 ? 'Proficient' : r.pct >= 70 ? 'Reinforcement' : 'Retraining'
+      ]);
+      simpleTable(headers, rows);
+    }
+
+    // ── Footer ──
+    y += 6;
+    checkPage(15);
+    doc.setDrawColor(229, 231, 235);
+    doc.line(margin, y, pageW - margin, y);
+    y += 4;
+    doc.setFontSize(8);
+    doc.setTextColor('#6b7280');
+    doc.text('DIS Assessment Report — Syphilis 2026 Case Definition Program  |  ' + date + '  |  Thresholds: >=80% proficient, 70-80% reinforcement, <70% retraining', pageW/2, y, { align:'center' });
+
+    // ── Save ──
+    doc.save('DIS_Assessment_Report_' + new Date().toISOString().slice(0,10) + '.pdf');
+    }
+    </script>
 </body>
 </html>
